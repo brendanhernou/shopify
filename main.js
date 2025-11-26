@@ -1279,40 +1279,51 @@ Shopify.CountryProvinceSelector.prototype = {
     }
   }
 };
-// Country check - wrapped in try-catch and non-blocking to prevent cart interference
+// Country check - RE-ENABLED but isolated from license system
+// The country check is needed for theme functionality but must not interfere with cart/license
+// Error message injection is disabled to prevent license error interference
 try {
   if (document.currentScript && document.currentScript.dataset.countryList) {
-    fetch("https://whatsmycountry.com/api/v3/country_check", {
-      'headers': {
-        'content-type': "application/json"
-      },
-      'body': JSON.stringify({
-        'list_function': document.currentScript.dataset.countryListFunction,
-        'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
-        'access_accept': Shopify.internationalAccessAccept(),
-        'error_message': document.currentScript.dataset.countryListError
-      }),
-      'method': "POST"
-    }).then(_0x2c0fe6 => {
-      if (!_0x2c0fe6.ok) {
-        return Promise.reject(new Error('Country check failed'));
-      }
-      return _0x2c0fe6.json();
-    }).then(_0xd8b35f => {
-      // Error message display is disabled but we still process the response
-      // This prevents the error from breaking cart functionality
-      if (_0xd8b35f && _0xd8b35f.error_message) {
-        // Silently handle - error display is disabled
-        console.warn('Country check returned error but display is disabled');
-      }
-    }).catch(_0x4e2f8a => {
-      // Silently fail - don't interfere with cart or other functionality
-      console.warn('Country check failed silently:', _0x4e2f8a);
-    });
+    // Run country check asynchronously and non-blocking
+    // Delay to ensure it doesn't interfere with cart operations
+    setTimeout(() => {
+      fetch("https://whatsmycountry.com/api/v3/country_check", {
+        'headers': {
+          'content-type': "application/json"
+        },
+        'body': JSON.stringify({
+          'list_function': document.currentScript.dataset.countryListFunction,
+          'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
+          'access_accept': Shopify.internationalAccessAccept(),
+          'error_message': document.currentScript.dataset.countryListError
+        }),
+        'method': "POST"
+      }).then(_0x2c0fe6 => {
+        if (!_0x2c0fe6.ok) {
+          return Promise.reject(new Error('Country check failed'));
+        }
+        return _0x2c0fe6.json();
+      }).then(_0xd8b35f => {
+        // CRITICAL: Error message injection is DISABLED to prevent license error interference
+        // The country check response is processed but NOT injected into the page
+        // This prevents the whatsmycountry API from triggering license errors
+        if (_0xd8b35f && _0xd8b35f.error_message) {
+          // Error message display is disabled - was causing license errors to appear
+          // Country check still runs for theme functionality but doesn't display errors
+          console.warn('Country check returned error but display is disabled to prevent license interference');
+        }
+        // Country check response is processed but not injected - theme can use it if needed
+        // but it won't interfere with cart or license system
+      }).catch(_0x4e2f8a => {
+        // Silently fail - don't interfere with cart or license functionality
+        // Country check failures should never break the cart
+        console.warn('Country check failed silently (non-blocking):', _0x4e2f8a);
+      });
+    }, 1000); // Delay to ensure cart operations can proceed first
   }
 } catch (_0x5a1b2c) {
-  // Fail silently to prevent breaking cart functionality
-  console.warn('Country check initialization failed:', _0x5a1b2c);
+  // Fail silently - country check errors should never break cart functionality
+  console.warn('Country check initialization failed (non-blocking):', _0x5a1b2c);
 }
 class InternalVideo extends HTMLElement {
   constructor() {
@@ -1976,6 +1987,7 @@ class QuantityBreaks extends HTMLElement {
 customElements.define('quantity-breaks', QuantityBreaks);
 function metafieldPoly() {
   // Run licensing check asynchronously and non-blocking to prevent cart interference
+  // Increased delay to ensure cart operations are never blocked
   setTimeout(() => {
     try {
       var _0x15dd8e = fetchConfig();
@@ -1986,24 +1998,42 @@ function metafieldPoly() {
       _0x15dd8e.body = JSON.stringify({
         'data': serial.trim()
       });
+      // License check - ensure it never blocks or interferes with cart
       fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
         if (_0x1e197f.status === 0xc9) {
           return _0x1e197f.json();
         }
         return null;
       }).then(_0x328b3b => {
+        // Only inject HTML if response is valid and element exists
+        // Ensure this never interferes with cart operations
         if (_0x328b3b && _0x328b3b.b && document[_0x328b3b.b]) {
-          document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+          // Check if cart is currently being used - if so, delay injection
+          const cartDrawer = document.querySelector('cart-drawer');
+          const isCartActive = cartDrawer && (cartDrawer.classList.contains('active') || cartDrawer.classList.contains('animate'));
+          
+          if (isCartActive) {
+            // Delay license error display if cart is active
+            setTimeout(() => {
+              if (document[_0x328b3b.b]) {
+                document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+              }
+            }, 2000);
+          } else {
+            document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+          }
         }
       }).catch(_0x3f8a1d => {
         // Silently fail - don't interfere with cart functionality
-        console.warn('License validation failed silently:', _0x3f8a1d);
+        // License check failures should never break the cart
+        console.warn('License validation failed silently (non-blocking):', _0x3f8a1d);
       });
     } catch (_0x2a5db3) {
       // Silently fail - don't break cart functionality
+      // License check errors should never prevent cart operations
       console.warn("License check error (non-blocking):", _0x2a5db3);
     }
-  }, 100); // Delay to ensure cart operations can proceed first
+  }, 500); // Increased delay to ensure cart operations can proceed first
   return true;
 }
 class QuantityGifts extends HTMLElement {
