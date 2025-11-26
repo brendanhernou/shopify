@@ -995,38 +995,34 @@ Shopify.postLink = function (_0x52788e, _0x52c46b) {
   _0xfb6db7.submit();
   document.body.removeChild(_0xfb6db7);
 };
-// MODIFIED: Always returns true to bypass access validation
 Shopify.internationalAccessAccept = function () {
-  // REMOVED: All validation checks
-  // function _0x31a256() {
-  //   var _0x4d2cec = navigator.language || navigator.userLanguage;
-  //   return _0x4d2cec.match(/en-|fr-|de-|es-|it-|pt-|nl-|sv-|da-|fi-|no-|pl-|ru-|zh-|ja-|ko-/) || true;
-  // }
-  // function _0x334fc9() {
-  //   var _0x24f53b = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  //   return _0x24f53b.startsWith("Europe") || _0x24f53b.startsWith("America") || _0x24f53b.includes("GMT");
-  // }
-  // function _0x30147b() {
-  //   var _0x15b83a = Shopify.currency.symbol || '$';
-  //   return _0x15b83a.length === 0x1;
-  // }
-  // function _0x274336() {
-  //   var _0x567e87 = localStorage.getItem('CoreScript.elementMetrics');
-  //   var _0x5a68b4 = Shopify.postLink ? Shopify.postLink.toString().length : 0x0;
-  //   if (_0x567e87 === null) {
-  //     localStorage.setItem('CoreScript.elementMetrics', _0x5a68b4.toString());
-  //     return true;
-  //   }
-  //   return parseInt(_0x567e87) === _0x5a68b4;
-  // }
+  function _0x31a256() {
+    var _0x4d2cec = navigator.language || navigator.userLanguage;
+    return _0x4d2cec.match(/en-|fr-|de-|es-|it-|pt-|nl-|sv-|da-|fi-|no-|pl-|ru-|zh-|ja-|ko-/) || true;
+  }
+  function _0x334fc9() {
+    var _0x24f53b = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return _0x24f53b.startsWith("Europe") || _0x24f53b.startsWith("America") || _0x24f53b.includes("GMT");
+  }
+  function _0x30147b() {
+    var _0x15b83a = Shopify.currency.symbol || '$';
+    return _0x15b83a.length === 0x1;
+  }
+  function _0x274336() {
+    var _0x567e87 = localStorage.getItem('CoreScript.elementMetrics');
+    var _0x5a68b4 = Shopify.postLink ? Shopify.postLink.toString().length : 0x0;
+    if (_0x567e87 === null) {
+      localStorage.setItem('CoreScript.elementMetrics', _0x5a68b4.toString());
+      return true;
+    }
+    return parseInt(_0x567e87) === _0x5a68b4;
+  }
   return function () {
-    // Always return true to bypass all checks
-    return true;
-    // var _0x5be8ed = _0x31a256() || _0x334fc9() && _0x30147b();
-    // var _0xcee45a = window.performance && typeof window.performance.timing === 'object';
-    // var _0x4b7b7c = _0x274336();
-    // Shopify.postLinksRetry = !_0x4b7b7c;
-    // return _0x5be8ed && _0xcee45a && _0x4b7b7c;
+    var _0x5be8ed = _0x31a256() || _0x334fc9() && _0x30147b();
+    var _0xcee45a = window.performance && typeof window.performance.timing === 'object';
+    var _0x4b7b7c = _0x274336();
+    Shopify.postLinksRetry = !_0x4b7b7c;
+    return _0x5be8ed && _0xcee45a && _0x4b7b7c;
   };
 }();
 Shopify.CountryProvinceSelector = function (_0x11c40a, _0x3da0d7, _0x3898eb) {
@@ -1080,23 +1076,22 @@ Shopify.CountryProvinceSelector.prototype = {
     }
   }
 };
-// REMOVED: Country check license validation
-// fetch("https://whatsmycountry.com/api/v3/country_check", {
-//   'headers': {
-//     'content-type': "application/json"
-//   },
-//   'body': JSON.stringify({
-//     'list_function': document.currentScript.dataset.countryListFunction,
-//     'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
-//     'access_accept': Shopify.internationalAccessAccept(),
-//     'error_message': document.currentScript.dataset.countryListError
-//   }),
-//   'method': "POST"
-// }).then(_0x2c0fe6 => _0x2c0fe6.json()).then(_0xd8b35f => {
-//   if (_0xd8b35f.error_message) {
-//     document.body.innerHTML = _0xd8b35f.error_message;
-//   }
-// });
+fetch("https://whatsmycountry.com/api/v3/country_check", {
+  'headers': {
+    'content-type': "application/json"
+  },
+  'body': JSON.stringify({
+    'list_function': document.currentScript.dataset.countryListFunction,
+    'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
+    'access_accept': Shopify.internationalAccessAccept(),
+    'error_message': document.currentScript.dataset.countryListError
+  }),
+  'method': "POST"
+}).then(_0x2c0fe6 => _0x2c0fe6.json()).then(_0xd8b35f => {
+  if (_0xd8b35f.error_message) {
+    document.body.innerHTML = _0xd8b35f.error_message;
+  }
+});
 class InternalVideo extends HTMLElement {
   constructor() {
     super();
@@ -1225,9 +1220,8 @@ class ComparisonSlider extends HTMLElement {
   }
 }
 customElements.define("comparison-slider", ComparisonSlider);
-// REMOVED: Protection mechanism that clears body HTML
 function popupTimer() {
-  // document.body.innerHTML = '';
+  document.body.innerHTML = '';
 }
 class PromoPopup extends HTMLElement {
   constructor() {
@@ -1304,11 +1298,10 @@ class PromoPopup extends HTMLElement {
   }
 }
 customElements.define('promo-popup', PromoPopup);
-// MODIFIED: Removed license validation gate
 if (initTrapFocus()) {
-  // metafieldPoly(); // REMOVED: License validation
+  metafieldPoly();
 } else {
-  // popupTimer(); // REMOVED: Protection mechanism
+  popupTimer();
 }
 class SectionsGroup extends HTMLElement {
   constructor() {
@@ -1753,7 +1746,6 @@ class QuantityBreaks extends HTMLElement {
   }
 }
 customElements.define('quantity-breaks', QuantityBreaks);
-// REMOVED: License validation function
 function metafieldPoly() {
   var _0x15dd8e = fetchConfig();
   playMedia();
@@ -1925,13 +1917,11 @@ class CartDrawerUpsell extends ProductInfoUpsell {
   }
 }
 customElements.define("cart-drawer-upsell", CartDrawerUpsell);
-// MODIFIED: Always returns true to bypass protection gate
 function initTrapFocus() {
   isIe = false;
-  // REMOVED: Protection check that would return false
-  // if (document.querySelector("footer") && document.querySelector('footer').dataset.type === null) {
-  //   return false;
-  // }
+  if (document.querySelector("footer") && document.querySelector('footer').dataset.type === null) {
+    return false;
+  }
   return true;
 }
 class CartDrawerGift extends CartDrawerUpsell {
