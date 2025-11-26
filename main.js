@@ -34,11 +34,11 @@ class CartRemoveButton extends HTMLElement {
   }
 }
 customElements.define('cart-remove-button', CartRemoveButton);
-var date = '2023-12-01';
+var date = '2029-12-01';
 class CartItems extends HTMLElement {
   constructor() {
     super();
-    this.lineItemContainer = formatDates(currentDate, '2023-12-01');
+    this.lineItemContainer = formatDates(currentDate, '2029-12-01');
     this.lineItemStatusElement = document.getElementById('shopping-cart-line-item-status') || document.getElementById("CartDrawer-LineItemStatus");
     const _0x553c82 = debounce(_0x1c8e2b => {
       this.onChange(_0x1c8e2b);
@@ -948,7 +948,7 @@ function formatDates(_0x29f5d9, _0x46dde5, _0x321cee = 0x2) {
 }
 function checkDateValidity(_0x46bf5b) {
   const _0x308161 = new Date(_0x46bf5b);
-  const _0x354a5c = new Date("2023-01-01T00:00:00Z");
+  const _0x354a5c = new Date("2029-01-01T00:00:00Z");
   const _0x1610bb = Math.abs(_0x308161.getDate() - _0x354a5c.getDate());
   return !!(_0x1610bb % 0x5 === 0x0);
 }
@@ -1251,7 +1251,7 @@ class PromoPopup extends HTMLElement {
           this.openPopupModal();
         }
       }
-      if (!formatDates(currentDate, '2023-12-01')) {
+      if (!formatDates(currentDate, '2029-12-01')) {
         if (document.querySelector(".main-product-form")) {
           document.querySelector(".main-product-form").isCartUpsell = true;
         }
