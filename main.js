@@ -258,7 +258,8 @@ class CartItems extends HTMLElement {
 customElements.define("cart-items", CartItems);
 var search = "search";
 if (!customElements.get("cart-note")) {
-  customElements.define("cart-note");
+  class CartNote extends HTMLElement {}
+  customElements.define("cart-note", CartNote);
 }
 ;
 function handleDiscountForm(_0x2c23bc) {
