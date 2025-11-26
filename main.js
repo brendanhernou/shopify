@@ -768,18 +768,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
 (function() {
   'use strict';
   
-  if (!window.routes || !window.routes.cart_add_url) {
-    // Wait for routes to be defined
-    const checkRoutes = setInterval(function() {
-      if (window.routes && window.routes.cart_add_url) {
-        clearInterval(checkRoutes);
-        initCartOverride();
-      }
-    }, 50);
-    setTimeout(function() { clearInterval(checkRoutes); }, 5000);
-  } else {
-    initCartOverride();
-  }
+  initCartOverride();
   
   function initCartOverride() {
     function shouldInterceptForm(form) {
@@ -789,6 +778,11 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       if (action.includes('/cart/add')) return true;
       if (form.querySelector('input[name="id"]')) return true;
       return false;
+    }
+    
+    function getCartAddEndpoint() {
+      const baseUrl = (window.routes && window.routes.cart_add_url) || '/cart/add.js';
+      return baseUrl.endsWith('.js') ? baseUrl : baseUrl + '.js';
     }
     
     function processCartForm(form) {
@@ -836,11 +830,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       }
       
       // Use Shopify cart API (.js endpoint expects JSON with items array)
-      const addEndpoint = window.routes.cart_add_url.endsWith('.js')
-        ? window.routes.cart_add_url
-        : window.routes.cart_add_url + '.js';
-
-      fetch(addEndpoint, {
+      fetch(getCartAddEndpoint(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
