@@ -815,6 +815,32 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       return endpoint;
     }
     
+    function fetchCartSections() {
+      const sections = getSectionsParam();
+      if (!sections) {
+        return Promise.resolve(null);
+      }
+      const params = new URLSearchParams({
+        'sections': sections,
+        'sections_url': window.location.pathname
+      });
+      return fetch('/cart?' + params.toString(), {
+        'headers': {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error('Cart sections fetch failed');
+        }
+        return response.json();
+      }).then(_0x4e2f8a => {
+        return _0x4e2f8a.sections || _0x4e2f8a;
+      }).catch(_0x4e2f8a => {
+        console.warn('Cart sections fetch error:', _0x4e2f8a);
+        return null;
+      });
+    }
+    
     function processCartForm(form) {
       const formData = new FormData(form);
       let variantId = formData.get('id');
@@ -881,7 +907,13 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
         }
         return response.json();
       })
-      .then(data => {
+      .then(async data => {
+        if (!data.sections) {
+          const sections = await fetchCartSections();
+          if (sections) {
+            data.sections = sections;
+          }
+        }
         // Open cart drawer if available, otherwise notification, otherwise redirect
         const cartDrawer = document.querySelector('cart-drawer');
         const cartNotification = document.querySelector('cart-notification');
