@@ -780,6 +780,18 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
   initCartOverride();
   
   function initCartOverride() {
+    function getSectionsParam() {
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (!cartDrawer || typeof cartDrawer.getSectionsToRender !== 'function') {
+        return null;
+      }
+      try {
+        return cartDrawer.getSectionsToRender().map(section => section.id).join(',');
+      } catch (_0x4e2f8a) {
+        return null;
+      }
+    }
+    
     function shouldInterceptForm(form) {
       if (!form || form.tagName !== 'FORM') return false;
       if (form.getAttribute('data-type') === 'add-to-cart-form') return true;
@@ -791,7 +803,16 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     
     function getCartAddEndpoint() {
       const baseUrl = (window.routes && window.routes.cart_add_url) || '/cart/add.js';
-      return baseUrl.endsWith('.js') ? baseUrl : baseUrl + '.js';
+      let endpoint = baseUrl.endsWith('.js') ? baseUrl : baseUrl + '.js';
+      const sections = getSectionsParam();
+      if (sections) {
+        const params = new URLSearchParams({
+          'sections': sections,
+          'sections_url': window.location.pathname
+        });
+        endpoint += (endpoint.includes('?') ? '&' : '?') + params.toString();
+      }
+      return endpoint;
     }
     
     function processCartForm(form) {
