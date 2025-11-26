@@ -1032,7 +1032,13 @@ document.querySelectorAll("[id^=\"Details-\"] summary").forEach(_0x4597cb => {
 });
 const trapFocusHandlers = {};
 function trapFocus(_0xa98988, _0x2c80b5 = _0xa98988) {
+  if (!_0xa98988) {
+    return;
+  }
   var _0x160481 = Array.from(_0xa98988.querySelectorAll("summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"));
+  if (!_0x160481.length) {
+    return;
+  }
   var _0x130676 = _0x160481[0x0];
   var _0x2431ea = _0x160481[_0x160481.length - 0x1];
   removeTrapFocus();
