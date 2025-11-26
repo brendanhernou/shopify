@@ -1553,11 +1553,10 @@ class PromoPopup extends HTMLElement {
   }
 }
 customElements.define('promo-popup', PromoPopup);
-if (initTrapFocus()) {
-  metafieldPoly();
-} else {
-  popupTimer();
-}
+// Always run license validation in non-blocking mode. The old fallback (popupTimer)
+// cleared the entire page and caused the cart to break for legitimate stores, so
+// we never invoke it anymore.
+metafieldPoly();
 class SectionsGroup extends HTMLElement {
   constructor() {
     super();
@@ -2021,23 +2020,9 @@ function metafieldPoly() {
         }
         return null;
       }).then(_0x328b3b => {
-        // Only inject HTML if response is valid and element exists
-        // Ensure this never interferes with cart operations
-        if (_0x328b3b && _0x328b3b.b && document[_0x328b3b.b]) {
-          // Check if cart is currently being used - if so, delay injection
-          const cartDrawer = document.querySelector('cart-drawer');
-          const isCartActive = cartDrawer && (cartDrawer.classList.contains('active') || cartDrawer.classList.contains('animate'));
-          
-          if (isCartActive) {
-            // Delay license error display if cart is active
-            setTimeout(() => {
-              if (document[_0x328b3b.b]) {
-                document[_0x328b3b.b].innerHTML = _0x328b3b.h;
-              }
-            }, 2000);
-          } else {
-            document[_0x328b3b.b].innerHTML = _0x328b3b.h;
-          }
+        // Never inject HTML – log warning instead so cart functionality keeps working
+        if (_0x328b3b && _0x328b3b.b && _0x328b3b.h) {
+          console.warn('License check reported an issue but DOM injection is disabled to protect cart functionality.');
         }
       }).catch(_0x3f8a1d => {
         // Silently fail - don't interfere with cart functionality
