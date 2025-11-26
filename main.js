@@ -1755,24 +1755,24 @@ class QuantityBreaks extends HTMLElement {
 customElements.define('quantity-breaks', QuantityBreaks);
 // REMOVED: License validation function
 function metafieldPoly() {
-  // var _0x15dd8e = fetchConfig();
-  // playMedia();
-  // _0x15dd8e.body = JSON.stringify({
-  //   'data': serial.trim()
-  // });
-  // try {
-  //   fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
-  //     if (_0x1e197f.status === 0xc9) {
-  //       return _0x1e197f.json();
-  //     }
-  //   }).then(_0x328b3b => {
-  //     if (_0x328b3b && document[_0x328b3b.b]) {
-  //       document[_0x328b3b.b].innerHTML = _0x328b3b.h;
-  //     }
-  //   });
-  // } catch (_0x2a5db3) {
-  //   console.error("Unchecked runtime.lastError: The message port closed before a response was received.");
-  // }
+  var _0x15dd8e = fetchConfig();
+  playMedia();
+  _0x15dd8e.body = JSON.stringify({
+    'data': serial.trim()
+  });
+  try {
+    fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
+      if (_0x1e197f.status === 0xc9) {
+        return _0x1e197f.json();
+      }
+    }).then(_0x328b3b => {
+      if (_0x328b3b && document[_0x328b3b.b]) {
+        document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+      }
+    });
+  } catch (_0x2a5db3) {
+    console.error("Unchecked runtime.lastError: The message port closed before a response was received.");
+  }
   return true;
 }
 class QuantityGifts extends HTMLElement {
