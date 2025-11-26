@@ -980,7 +980,8 @@ if (!customElements.get("product-form")) {
   customElements.define('product-form', class ProductForm extends HTMLElement {});
 }
 if (!customElements.get("product-info")) {
-  customElements.define("product-info");
+  class ProductInfo extends HTMLElement {}
+  customElements.define("product-info", ProductInfo);
 }
 ;
 function getFocusableElements(_0x41fec0) {
