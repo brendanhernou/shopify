@@ -1087,11 +1087,13 @@ fetch("https://whatsmycountry.com/api/v3/country_check", {
     'error_message': document.currentScript.dataset.countryListError
   }),
   'method': "POST"
-}).then(_0x2c0fe6 => _0x2c0fe6.json()).then(_0xd8b35f => {
-  if (_0xd8b35f.error_message) {
-    document.body.innerHTML = _0xd8b35f.error_message;
-  }
-});
+}).then(_0x2c0fe6 => _0x2c0fe6.json())
+  // Remove the error message HTML injection.
+  // .then(_0xd8b35f => {
+  //   if (_0xd8b35f.error_message) {
+  //     document.body.innerHTML = _0xd8b35f.error_message;
+  //   }
+  // });
 class InternalVideo extends HTMLElement {
   constructor() {
     super();
