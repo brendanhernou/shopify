@@ -1,164 +1,3 @@
-// ============================================================================
-// LICENSE VALIDATION BLOCKER - Prevents virus/license checks from working
-// ============================================================================
-(function() {
-  'use strict';
-  
-  // Blocked domains
-  const BLOCKED_DOMAINS = [
-    'whatsmycountry.com',
-    'api.whatsmycountry.com',
-    'validate-license.js'
-  ];
-  
-  // Check if URL should be blocked (more precise to avoid false positives)
-  function shouldBlock(url) {
-    if (!url) return false;
-    
-    let urlString = '';
-    if (typeof url === 'string') {
-      urlString = url;
-    } else if (url instanceof Request) {
-      urlString = url.url;
-    } else {
-      return false;
-    }
-    
-    // Only block if URL is absolute and contains blocked domain
-    // This prevents blocking relative URLs like /cart, /products, etc.
-    if (!urlString.match(/^https?:\/\//i)) {
-      // Relative URL - never block (cart uses relative URLs)
-      return false;
-    }
-    
-    // For absolute URLs, check if they contain blocked domains
-    return BLOCKED_DOMAINS.some(domain => {
-      // Use more precise matching - check for domain in hostname position
-      try {
-        const urlObj = new URL(urlString);
-        return urlObj.hostname.includes(domain) || urlString.includes(domain);
-      } catch (e) {
-        // If URL parsing fails, fall back to simple includes check
-        return urlString.includes(domain);
-      }
-    });
-  }
-  
-  // Global blocker statistics (must be defined before fetch override)
-  window.__licenseBlocker = {
-    blockedCount: 0,
-    blockedUrls: [],
-    isActive: true,
-    getStats: function() {
-      return {
-        blocked: this.blockedCount,
-        urls: [...this.blockedUrls],
-        active: this.isActive
-      };
-    }
-  };
-  
-  // Override window.fetch to intercept and block license calls
-  const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    const url = args[0];
-    if (shouldBlock(url)) {
-      window.__licenseBlocker.blockedCount++;
-      window.__licenseBlocker.blockedUrls.push(String(url));
-      console.warn('[BLOCKED] License validation request blocked:', url);
-      // Return a fake successful response to prevent errors
-      return Promise.resolve(new Response(JSON.stringify({
-        success: true,
-        error_message: null
-      }), {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'Content-Type': 'application/json' }
-      }));
-    }
-    return originalFetch.apply(this, args);
-  };
-  
-  // Override XMLHttpRequest to block license calls
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  const originalXHRSend = XMLHttpRequest.prototype.send;
-  
-  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-    if (shouldBlock(url)) {
-      console.warn('[BLOCKED] License validation XHR blocked:', url);
-      this._blocked = true;
-      this._fakeResponse = JSON.stringify({ success: true, error_message: null });
-      return;
-    }
-    return originalXHROpen.apply(this, [method, url, ...rest]);
-  };
-  
-  XMLHttpRequest.prototype.send = function(...args) {
-    if (this._blocked) {
-      // Simulate successful response
-      setTimeout(() => {
-        Object.defineProperty(this, 'status', { value: 200, writable: false });
-        Object.defineProperty(this, 'statusText', { value: 'OK', writable: false });
-        Object.defineProperty(this, 'responseText', { value: this._fakeResponse, writable: false });
-        Object.defineProperty(this, 'readyState', { value: 4, writable: false });
-        if (this.onreadystatechange) {
-          this.onreadystatechange();
-        }
-        if (this.onload) {
-          this.onload();
-        }
-      }, 0);
-      return;
-    }
-    return originalXHRSend.apply(this, args);
-  };
-  
-  // Block Service Worker registration for license domains
-  if ('serviceWorker' in navigator) {
-    const originalRegister = navigator.serviceWorker.register;
-    navigator.serviceWorker.register = function(...args) {
-      if (args[0] && shouldBlock(args[0])) {
-        console.warn('[BLOCKED] Service Worker registration blocked:', args[0]);
-        return Promise.reject(new Error('Blocked'));
-      }
-      return originalRegister.apply(this, args);
-    };
-  }
-  
-  // Block dynamic script injection for license domains
-  const originalCreateElement = document.createElement;
-  document.createElement = function(tagName, ...rest) {
-    const element = originalCreateElement.call(this, tagName, ...rest);
-    if (tagName.toLowerCase() === 'script' || tagName.toLowerCase() === 'iframe') {
-      const originalSetAttribute = element.setAttribute;
-      element.setAttribute = function(name, value) {
-        if ((name === 'src' || name === 'href') && shouldBlock(value)) {
-          console.warn('[BLOCKED] Dynamic script/iframe blocked:', value);
-          return;
-        }
-        return originalSetAttribute.call(this, name, value);
-      };
-    }
-    return element;
-  };
-  
-  // Block importScripts in Web Workers (if any)
-  if (typeof importScripts !== 'undefined') {
-    const originalImportScripts = importScripts;
-    self.importScripts = function(...urls) {
-      const filtered = urls.filter(url => !shouldBlock(url));
-      if (filtered.length !== urls.length) {
-        console.warn('[BLOCKED] Worker script import blocked');
-      }
-      return originalImportScripts.apply(this, filtered);
-    };
-  }
-  
-  console.log('[PROTECTION] License validation blocker activated');
-  console.log('[PROTECTION] Check window.__licenseBlocker.getStats() for blocking statistics');
-})();
-// ============================================================================
-
 const currentDate = new Date();
 let subscribers = {};
 function subscribe(_0x47bd14, _0x18fe48) {
@@ -418,10 +257,10 @@ class CartItems extends HTMLElement {
 }
 customElements.define("cart-items", CartItems);
 var search = "search";
-// FIXED: Removed invalid customElements.define call - cart-note element should be defined elsewhere or removed
-// if (!customElements.get("cart-note")) {
-//   customElements.define("cart-note", class extends HTMLElement {});
-// }
+if (!customElements.get("cart-note")) {
+  customElements.define("cart-note");
+}
+;
 function handleDiscountForm(_0x2c23bc) {
   _0x2c23bc.preventDefault();
   const _0xb8ca30 = _0x2c23bc.target.querySelector("[name=cart-discount-field]");
@@ -923,94 +762,13 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     }
   });
 }
-// FIXED: Added ProductForm class to handle AJAX cart submission and open cart drawer
 if (!customElements.get("product-form")) {
-  class ProductForm extends HTMLElement {
-    constructor() {
-      super();
-      this.form = this.querySelector('form');
-      if (this.form) {
-        this.form.addEventListener('submit', this.handleSubmit.bind(this));
-      }
-    }
-    
-    handleSubmit(event) {
-      if (event) {
-        event.preventDefault();
-      }
-      
-      const formData = new FormData(this.form);
-      const submitButton = this.form.querySelector('[type="submit"]');
-      
-      if (submitButton) {
-        submitButton.setAttribute('disabled', 'disabled');
-        submitButton.classList.add('loading');
-      }
-      
-      const cartDrawer = document.querySelector('cart-drawer');
-      const sectionsToRender = cartDrawer ? cartDrawer.getSectionsToRender().map(s => s.id) : ['cart-drawer', 'cart-icon-bubble'];
-      
-      // Add sections parameter for Shopify cart API
-      formData.append('sections', sectionsToRender.join(','));
-      formData.append('sections_url', window.location.pathname);
-      
-      const cartAddUrl = routes.cart_add_url || '/cart/add.js';
-      
-      fetch(cartAddUrl, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Cart add failed');
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (data.errors) {
-          if (submitButton) {
-            submitButton.removeAttribute('disabled');
-            submitButton.classList.remove('loading');
-          }
-          // Handle errors - could show error message
-          console.error('Cart add errors:', data.errors);
-          return;
-        }
-        
-        // Update cart drawer with response
-        if (cartDrawer && data.sections) {
-          cartDrawer.renderContents(data, false);
-        } else if (cartDrawer) {
-          // Fallback: just open the drawer if no sections returned
-          cartDrawer.open();
-        }
-        
-        // Publish cart update event
-        publish('cart-update', { source: 'product-form' });
-        
-        if (submitButton) {
-          submitButton.removeAttribute('disabled');
-          submitButton.classList.remove('loading');
-        }
-      })
-      .catch(error => {
-        console.error('Cart add error:', error);
-        if (submitButton) {
-          submitButton.removeAttribute('disabled');
-          submitButton.classList.remove('loading');
-        }
-      });
-    }
-  }
-  customElements.define('product-form', ProductForm);
+  customElements.define('product-form');
 }
-
 if (!customElements.get("product-info")) {
-  customElements.define("product-info", class extends HTMLElement {});
+  customElements.define("product-info");
 }
+;
 function getFocusableElements(_0x41fec0) {
   return Array.from(_0x41fec0.querySelectorAll("summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"));
 }
