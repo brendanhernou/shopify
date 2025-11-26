@@ -826,11 +826,16 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
         items[0].properties = properties;
       }
       
-      // Use Shopify cart API with proper items parameter (JSON format)
-      fetch(window.routes.cart_add_url, {
+      // Use Shopify cart API (.js endpoint expects JSON with items array)
+      const addEndpoint = window.routes.cart_add_url.endsWith('.js')
+        ? window.routes.cart_add_url
+        : window.routes.cart_add_url + '.js';
+
+      fetch(addEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ items: items })
       })
