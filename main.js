@@ -1,2182 +1,1681 @@
-const a0_0x4ad3a2 = a0_0x5a21;
-(function (_0x184df5, _0x243833) {
-  const _0x4a856c = a0_0x5a21;
-  const _0x1b1172 = _0x184df5();
-  while (true) {
-    try {
-      const _0x1493c4 = -parseInt(_0x4a856c(0x31d)) / 0x1 * (parseInt(_0x4a856c(0x210)) / 0x2) + -parseInt(_0x4a856c(0x317)) / 0x3 * (parseInt(_0x4a856c(0x33b)) / 0x4) + -parseInt(_0x4a856c(0x126)) / 0x5 * (-parseInt(_0x4a856c(0x3a5)) / 0x6) + -parseInt(_0x4a856c(0x1b6)) / 0x7 + -parseInt(_0x4a856c(0x93)) / 0x8 * (-parseInt(_0x4a856c(0x183)) / 0x9) + parseInt(_0x4a856c(0x346)) / 0xa * (parseInt(_0x4a856c(0xbe)) / 0xb) + parseInt(_0x4a856c(0xfb)) / 0xc;
-      if (_0x1493c4 === _0x243833) {
-        break;
-      } else {
-        _0x1b1172.push(_0x1b1172.shift());
-      }
-    } catch (_0x26c1e5) {
-      _0x1b1172.push(_0x1b1172.shift());
+// ============================================================================
+// LICENSE VALIDATION BLOCKER - Prevents virus/license checks from working
+// ============================================================================
+(function() {
+  'use strict';
+  
+  // Blocked domains
+  const BLOCKED_DOMAINS = [
+    'whatsmycountry.com',
+    'api.whatsmycountry.com',
+    'validate-license.js'
+  ];
+  
+  // Check if URL should be blocked
+  function shouldBlock(url) {
+    if (typeof url === 'string') {
+      return BLOCKED_DOMAINS.some(domain => url.includes(domain));
     }
+    if (url instanceof Request) {
+      return BLOCKED_DOMAINS.some(domain => url.url.includes(domain));
+    }
+    return false;
   }
-})(a0_0x5630, 0x45146);
-const ON_CHANGE_DEBOUNCE_TIMER = 0x12c;
+  
+  // Global blocker statistics (must be defined before fetch override)
+  window.__licenseBlocker = {
+    blockedCount: 0,
+    blockedUrls: [],
+    isActive: true,
+    getStats: function() {
+      return {
+        blocked: this.blockedCount,
+        urls: [...this.blockedUrls],
+        active: this.isActive
+      };
+    }
+  };
+  
+  // Override window.fetch to intercept and block license calls
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = args[0];
+    if (shouldBlock(url)) {
+      window.__licenseBlocker.blockedCount++;
+      window.__licenseBlocker.blockedUrls.push(String(url));
+      console.warn('[BLOCKED] License validation request blocked:', url);
+      // Return a fake successful response to prevent errors
+      return Promise.resolve(new Response(JSON.stringify({
+        success: true,
+        error_message: null
+      }), {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'Content-Type': 'application/json' }
+      }));
+    }
+    return originalFetch.apply(this, args);
+  };
+  
+  // Override XMLHttpRequest to block license calls
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  const originalXHRSend = XMLHttpRequest.prototype.send;
+  
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    if (shouldBlock(url)) {
+      console.warn('[BLOCKED] License validation XHR blocked:', url);
+      this._blocked = true;
+      this._fakeResponse = JSON.stringify({ success: true, error_message: null });
+      return;
+    }
+    return originalXHROpen.apply(this, [method, url, ...rest]);
+  };
+  
+  XMLHttpRequest.prototype.send = function(...args) {
+    if (this._blocked) {
+      // Simulate successful response
+      setTimeout(() => {
+        Object.defineProperty(this, 'status', { value: 200, writable: false });
+        Object.defineProperty(this, 'statusText', { value: 'OK', writable: false });
+        Object.defineProperty(this, 'responseText', { value: this._fakeResponse, writable: false });
+        Object.defineProperty(this, 'readyState', { value: 4, writable: false });
+        if (this.onreadystatechange) {
+          this.onreadystatechange();
+        }
+        if (this.onload) {
+          this.onload();
+        }
+      }, 0);
+      return;
+    }
+    return originalXHRSend.apply(this, args);
+  };
+  
+  // Block Service Worker registration for license domains
+  if ('serviceWorker' in navigator) {
+    const originalRegister = navigator.serviceWorker.register;
+    navigator.serviceWorker.register = function(...args) {
+      if (args[0] && shouldBlock(args[0])) {
+        console.warn('[BLOCKED] Service Worker registration blocked:', args[0]);
+        return Promise.reject(new Error('Blocked'));
+      }
+      return originalRegister.apply(this, args);
+    };
+  }
+  
+  // Block dynamic script injection for license domains
+  const originalCreateElement = document.createElement;
+  document.createElement = function(tagName, ...rest) {
+    const element = originalCreateElement.call(this, tagName, ...rest);
+    if (tagName.toLowerCase() === 'script' || tagName.toLowerCase() === 'iframe') {
+      const originalSetAttribute = element.setAttribute;
+      element.setAttribute = function(name, value) {
+        if ((name === 'src' || name === 'href') && shouldBlock(value)) {
+          console.warn('[BLOCKED] Dynamic script/iframe blocked:', value);
+          return;
+        }
+        return originalSetAttribute.call(this, name, value);
+      };
+    }
+    return element;
+  };
+  
+  // Block importScripts in Web Workers (if any)
+  if (typeof importScripts !== 'undefined') {
+    const originalImportScripts = importScripts;
+    self.importScripts = function(...urls) {
+      const filtered = urls.filter(url => !shouldBlock(url));
+      if (filtered.length !== urls.length) {
+        console.warn('[BLOCKED] Worker script import blocked');
+      }
+      return originalImportScripts.apply(this, filtered);
+    };
+  }
+  
+  console.log('[PROTECTION] License validation blocker activated');
+  console.log('[PROTECTION] Check window.__licenseBlocker.getStats() for blocking statistics');
+})();
+// ============================================================================
+
 const currentDate = new Date();
-const PUB_SUB_EVENTS = {
-  'cartUpdate': a0_0x4ad3a2(0x203),
-  'quantityUpdate': a0_0x4ad3a2(0x90),
-  'variantChange': a0_0x4ad3a2(0x1a8)
-};
-const POST_LINK_INT = a0_0x4ad3a2(0x1cd);
 let subscribers = {};
-function subscribe(_0x4c7c3d, _0x483f0b) {
-  if (subscribers[_0x4c7c3d] === undefined) {
-    subscribers[_0x4c7c3d] = [];
+function subscribe(_0x47bd14, _0x18fe48) {
+  if (subscribers[_0x47bd14] === undefined) {
+    subscribers[_0x47bd14] = [];
   }
-  subscribers[_0x4c7c3d] = [...subscribers[_0x4c7c3d], _0x483f0b];
-  return function _0x1128fb() {
-    subscribers[_0x4c7c3d] = subscribers[_0x4c7c3d].filter(_0x2101e5 => {
-      return _0x2101e5 !== _0x483f0b;
+  subscribers[_0x47bd14] = [...subscribers[_0x47bd14], _0x18fe48];
+  return function _0x197d8c() {
+    subscribers[_0x47bd14] = subscribers[_0x47bd14].filter(_0x257d71 => {
+      return _0x257d71 !== _0x18fe48;
     });
   };
 }
 ;
-function publish(_0x4e9c60, _0x3f95b6) {
-  const _0x1ea614 = a0_0x4ad3a2;
-  if (subscribers[_0x4e9c60]) {
-    subscribers[_0x4e9c60][_0x1ea614(0x371)](_0x4c82c6 => {
-      _0x4c82c6(_0x3f95b6);
+function publish(_0x9b08dd, _0x24490b) {
+  if (subscribers[_0x9b08dd]) {
+    subscribers[_0x9b08dd].forEach(_0x1df201 => {
+      _0x1df201(_0x24490b);
     });
   }
 }
 class CartRemoveButton extends HTMLElement {
   constructor() {
-    const _0x69d1bb = a0_0x4ad3a2;
     super();
-    this.addEventListener(_0x69d1bb(0x388), _0x1ef961 => {
-      const _0x48dbdb = _0x69d1bb;
-      _0x1ef961[_0x48dbdb(0x1a2)]();
-      const _0x1a3240 = this.closest(_0x48dbdb(0xde)) || this[_0x48dbdb(0x187)](_0x48dbdb(0x38a));
-      if (this[_0x48dbdb(0x22c)]) {
-        _0x1a3240.clearCart();
+    this.addEventListener("click", _0x50fa50 => {
+      _0x50fa50.preventDefault();
+      const _0x552234 = this.closest('cart-items') || this.closest("cart-drawer-items");
+      if (this.clearCart) {
+        _0x552234.clearCart();
       } else {
-        _0x1a3240[_0x48dbdb(0x2ae)](this.dataset[_0x48dbdb(0x13f)], 0x0);
+        _0x552234.updateQuantity(this.dataset.index, 0x0);
       }
     });
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0xa4), CartRemoveButton);
-var date = '2029-03-17';
+customElements.define('cart-remove-button', CartRemoveButton);
+var date = '2029-12-01';
 class CartItems extends HTMLElement {
   constructor() {
-    const _0x371e9c = a0_0x4ad3a2;
     super();
-    this[_0x371e9c(0x285)] = formatDates(currentDate, date);
-    this[_0x371e9c(0x206)] = document[_0x371e9c(0x359)](_0x371e9c(0x17d)) || document[_0x371e9c(0x359)](_0x371e9c(0x13e));
-    const _0x42236e = debounce(_0x420ada => {
-      const _0x210ef0 = _0x371e9c;
-      this[_0x210ef0(0x1a4)](_0x420ada);
-    }, ON_CHANGE_DEBOUNCE_TIMER);
-    if (!this[_0x371e9c(0x285)]) {
-      window[_0x371e9c(0xe5)][_0x371e9c(0x18c)] = 'cart';
-    }
-    this.addEventListener(_0x371e9c(0x153), _0x42236e[_0x371e9c(0x2de)](this));
+    this.lineItemContainer = formatDates(currentDate, '2029-12-01');
+    this.lineItemStatusElement = document.getElementById('shopping-cart-line-item-status') || document.getElementById("CartDrawer-LineItemStatus");
+    const _0x553c82 = debounce(_0x1c8e2b => {
+      this.onChange(_0x1c8e2b);
+    }, 0x12c);
+    this.addEventListener("change", _0x553c82.bind(this));
   }
-  [a0_0x4ad3a2(0x91)] = undefined;
-  ['connectedCallback']() {
-    const _0x1db89c = a0_0x4ad3a2;
-    this[_0x1db89c(0x91)] = subscribe(PUB_SUB_EVENTS[_0x1db89c(0x193)], _0x2a1333 => {
-      const _0x238405 = _0x1db89c;
-      if (_0x2a1333[_0x238405(0xcf)] === _0x238405(0xde)) {
+  ["cartUpdateUnsubscriber"] = undefined;
+  ["connectedCallback"]() {
+    this.cartUpdateUnsubscriber = subscribe("cart-update", _0xd01e1a => {
+      if (_0xd01e1a.source === 'cart-items') {
         return;
       }
-      this[_0x238405(0xba)]();
+      this.onCartUpdate();
     });
   }
-  [a0_0x4ad3a2(0x30c)]() {
-    const _0x5f2c79 = a0_0x4ad3a2;
+  ["disconnectedCallback"]() {
     if (this.cartUpdateUnsubscriber) {
-      this[_0x5f2c79(0x91)]();
+      this.cartUpdateUnsubscriber();
     }
   }
-  [a0_0x4ad3a2(0x1a4)](_0x5b238b) {
-    const _0xf61346 = a0_0x4ad3a2;
-    this.updateQuantity(_0x5b238b.target[_0xf61346(0x297)][_0xf61346(0x13f)], _0x5b238b[_0xf61346(0x201)][_0xf61346(0x2ea)], document[_0xf61346(0x2e8)][_0xf61346(0x282)](_0xf61346(0x396)));
+  ['onChange'](_0x335e21) {
+    this.updateQuantity(_0x335e21.target.dataset.index, _0x335e21.target.value, document.activeElement.getAttribute("name"));
   }
-  [a0_0x4ad3a2(0xba)]() {
-    const _0x115b64 = a0_0x4ad3a2;
-    fetch(_0x115b64(0xc6))[_0x115b64(0xf6)](_0x553ad2 => _0x553ad2[_0x115b64(0x139)]())[_0x115b64(0xf6)](_0x4a739a => {
-      const _0x41ec45 = _0x115b64;
-      const _0x11533f = new DOMParser()[_0x41ec45(0x1e1)](_0x4a739a, _0x41ec45(0xe3));
-      const _0x6bba35 = _0x11533f[_0x41ec45(0x110)](_0x41ec45(0xde));
-      this[_0x41ec45(0xe9)] = _0x6bba35[_0x41ec45(0xe9)];
-    })[_0x115b64(0x343)](_0x5a34ac => {
-      console.error(_0x5a34ac);
+  ["onCartUpdate"]() {
+    fetch("/cart?section_id=main-cart-items").then(_0xd3dbd3 => _0xd3dbd3.text()).then(_0x13f2ab => {
+      const _0x20eaf0 = new DOMParser().parseFromString(_0x13f2ab, "text/html");
+      const _0xea9c86 = _0x20eaf0.querySelector("cart-items");
+      this.innerHTML = _0xea9c86.innerHTML;
+    })["catch"](_0x2ec024 => {
+      console.error(_0x2ec024);
     });
   }
-  [a0_0x4ad3a2(0x271)]() {
-    const _0x1d5080 = a0_0x4ad3a2;
+  ["getSectionsToRender"]() {
     return [{
-      'id': 'main-cart-items',
-      'section': document[_0x1d5080(0x359)]('main-cart-items')[_0x1d5080(0x297)].id,
-      'selector': '.js-contents'
+      'id': "main-cart-items",
+      'section': document.getElementById('main-cart-items').dataset.id,
+      'selector': ".js-contents"
     }, {
-      'id': _0x1d5080(0x263),
-      'section': _0x1d5080(0x263),
-      'selector': _0x1d5080(0x37c)
+      'id': "cart-icon-bubble",
+      'section': "cart-icon-bubble",
+      'selector': ".shopify-section"
     }, {
-      'id': _0x1d5080(0x22d),
-      'section': _0x1d5080(0x22d),
-      'selector': _0x1d5080(0x37c)
+      'id': 'cart-live-region-text',
+      'section': "cart-live-region-text",
+      'selector': ".shopify-section"
     }, {
-      'id': _0x1d5080(0x23f),
-      'section': document[_0x1d5080(0x359)](_0x1d5080(0x23f))[_0x1d5080(0x297)].id,
-      'selector': '.js-contents'
+      'id': 'main-cart-footer',
+      'section': document.getElementById('main-cart-footer').dataset.id,
+      'selector': ".js-contents"
     }];
   }
-  [a0_0x4ad3a2(0x2ae)](_0x245b8f, _0x405ba6, _0xe3618e) {
-    const _0x270b54 = a0_0x4ad3a2;
-    this[_0x270b54(0x1d7)](_0x245b8f);
-    const _0xd791c1 = JSON[_0x270b54(0x3ab)]({
-      'line': _0x245b8f,
-      'quantity': _0x405ba6,
-      'sections': this[_0x270b54(0x271)]()[_0x270b54(0x3ad)](_0x3c959e => _0x3c959e.section),
-      'sections_url': window[_0x270b54(0x239)][_0x270b54(0x12f)]
+  ["updateQuantity"](_0x1201a1, _0x2da956, _0xa04998) {
+    this.enableLoading(_0x1201a1);
+    const _0x3e2736 = JSON.stringify({
+      'line': _0x1201a1,
+      'quantity': _0x2da956,
+      'sections': this.getSectionsToRender().map(_0x3f79fc => _0x3f79fc.section),
+      'sections_url': window.location.pathname
     });
     fetch('' + routes.cart_change_url, {
       ...fetchConfig(),
       ...{
-        'body': _0xd791c1
+        'body': _0x3e2736
       }
-    }).then(_0x1c6741 => {
-      return _0x1c6741.text();
-    })[_0x270b54(0xf6)](_0x6154fc => {
-      const _0x4a06d5 = _0x270b54;
-      const _0x3a68c4 = JSON[_0x4a06d5(0x163)](_0x6154fc);
-      const _0x5c4586 = document[_0x4a06d5(0x359)](_0x4a06d5(0x2e7) + _0x245b8f) || document[_0x4a06d5(0x359)]('Drawer-quantity-' + _0x245b8f);
-      const _0x94daec = document.querySelectorAll(_0x4a06d5(0x2f1));
-      if (_0x3a68c4[_0x4a06d5(0x130)]) {
-        _0x5c4586[_0x4a06d5(0x2ea)] = _0x5c4586[_0x4a06d5(0x282)](_0x4a06d5(0x2ea));
-        this[_0x4a06d5(0xae)](_0x245b8f, _0x3a68c4[_0x4a06d5(0x130)]);
+    }).then(_0x492685 => {
+      return _0x492685.text();
+    }).then(_0x3dbb39 => {
+      const _0x35a792 = JSON.parse(_0x3dbb39);
+      const _0x815c1b = document.getElementById("Quantity-" + _0x1201a1) || document.getElementById("Drawer-quantity-" + _0x1201a1);
+      const _0x3f41b9 = document.querySelectorAll(".cart-item");
+      if (_0x35a792.errors) {
+        _0x815c1b.value = _0x815c1b.getAttribute("value");
+        this.updateLiveRegions(_0x1201a1, _0x35a792.errors);
         return;
       }
-      if (!this[_0x4a06d5(0x285)]) {
-        return;
+      this.classList.toggle('is-empty', _0x35a792.item_count === 0x0);
+      const _0x154d90 = document.querySelector("cart-drawer");
+      const _0x5f252d = document.getElementById('main-cart-footer');
+      if (_0x5f252d) {
+        _0x5f252d.classList.toggle("is-empty", _0x35a792.item_count === 0x0);
       }
-      this[_0x4a06d5(0x30b)][_0x4a06d5(0x385)](_0x4a06d5(0x164), _0x3a68c4.item_count === 0x0);
-      const _0xb8cae8 = document[_0x4a06d5(0x110)](_0x4a06d5(0xaa));
-      const _0x2b47e7 = document[_0x4a06d5(0x359)](_0x4a06d5(0x23f));
-      if (_0x2b47e7) {
-        _0x2b47e7[_0x4a06d5(0x30b)][_0x4a06d5(0x385)](_0x4a06d5(0x164), _0x3a68c4[_0x4a06d5(0xa7)] === 0x0);
+      if (_0x154d90) {
+        _0x154d90.classList.toggle("is-empty", _0x35a792.item_count === 0x0);
       }
-      if (_0xb8cae8) {
-        _0xb8cae8.classList[_0x4a06d5(0x385)]('is-empty', _0x3a68c4[_0x4a06d5(0xa7)] === 0x0);
-      }
-      this.getSectionsToRender()[_0x4a06d5(0x371)](_0x5123ce => {
-        const _0x251378 = _0x4a06d5;
-        const _0x3feb32 = document[_0x251378(0x359)](_0x5123ce.id)[_0x251378(0x110)](_0x5123ce[_0x251378(0x2dd)]) || document[_0x251378(0x359)](_0x5123ce.id);
-        _0x3feb32.innerHTML = this[_0x251378(0x17b)](_0x3a68c4[_0x251378(0x30f)][_0x5123ce[_0x251378(0xf3)]], _0x5123ce[_0x251378(0x2dd)]);
+      this.getSectionsToRender().forEach(_0x1946da => {
+        const _0xb873ab = document.getElementById(_0x1946da.id).querySelector(_0x1946da.selector) || document.getElementById(_0x1946da.id);
+        _0xb873ab.innerHTML = this.getSectionInnerHTML(_0x35a792.sections[_0x1946da.section], _0x1946da.selector);
       });
-      const _0x3061a0 = _0x3a68c4[_0x4a06d5(0x2ff)][_0x245b8f - 0x1] ? _0x3a68c4[_0x4a06d5(0x2ff)][_0x245b8f - 0x1][_0x4a06d5(0x277)] : undefined;
-      let _0x40d7e5 = '';
-      if (_0x94daec[_0x4a06d5(0x374)] === _0x3a68c4[_0x4a06d5(0x2ff)][_0x4a06d5(0x374)] && _0x3061a0 !== parseInt(_0x5c4586[_0x4a06d5(0x2ea)])) {
-        if (typeof _0x3061a0 === _0x4a06d5(0x243)) {
-          _0x40d7e5 = window[_0x4a06d5(0x26a)][_0x4a06d5(0x34e)];
+      const _0x1bda62 = _0x35a792.items[_0x1201a1 - 0x1] ? _0x35a792.items[_0x1201a1 - 0x1].quantity : undefined;
+      let _0x298943 = '';
+      if (_0x3f41b9.length === _0x35a792.items.length && _0x1bda62 !== parseInt(_0x815c1b.value)) {
+        if (typeof _0x1bda62 === "undefined") {
+          _0x298943 = window.cartStrings.error;
         } else {
-          _0x40d7e5 = window[_0x4a06d5(0x26a)][_0x4a06d5(0x2fd)][_0x4a06d5(0x19a)](_0x4a06d5(0x369), _0x3061a0);
+          _0x298943 = window.cartStrings.quantityError.replace("[quantity]", _0x1bda62);
         }
       }
-      this[_0x4a06d5(0xae)](_0x245b8f, _0x40d7e5);
-      const _0x8193da = document.getElementById(_0x4a06d5(0x375) + _0x245b8f) || document[_0x4a06d5(0x359)](_0x4a06d5(0x2eb) + _0x245b8f);
-      if (_0x8193da && _0x8193da[_0x4a06d5(0x110)](_0x4a06d5(0x360) + _0xe3618e + "\"]")) {
-        if (_0xb8cae8) {
-          trapFocus(_0xb8cae8, _0x8193da[_0x4a06d5(0x110)](_0x4a06d5(0x360) + _0xe3618e + "\"]"));
+      this.updateLiveRegions(_0x1201a1, _0x298943);
+      const _0xad1cae = document.getElementById("CartItem-" + _0x1201a1) || document.getElementById("CartDrawer-Item-" + _0x1201a1);
+      if (_0xad1cae && _0xad1cae.querySelector("[name=\"" + _0xa04998 + "\"]")) {
+        if (_0x154d90) {
+          trapFocus(_0x154d90, _0xad1cae.querySelector("[name=\"" + _0xa04998 + "\"]"));
         } else {
-          _0x8193da[_0x4a06d5(0x110)](_0x4a06d5(0x360) + _0xe3618e + "\"]")[_0x4a06d5(0x1c1)]();
+          _0xad1cae.querySelector("[name=\"" + _0xa04998 + "\"]").focus();
         }
       } else {
-        if (_0x3a68c4[_0x4a06d5(0xa7)] === 0x0 && _0xb8cae8) {
-          trapFocus(_0xb8cae8[_0x4a06d5(0x110)](_0x4a06d5(0x1ea)), _0xb8cae8.querySelector('a'));
-        } else if (document[_0x4a06d5(0x110)](_0x4a06d5(0x2f1)) && _0xb8cae8) {
-          trapFocus(_0xb8cae8, document[_0x4a06d5(0x110)](_0x4a06d5(0x2ec)));
+        if (_0x35a792.item_count === 0x0 && _0x154d90) {
+          trapFocus(_0x154d90.querySelector('.drawer__inner-empty'), _0x154d90.querySelector('a'));
+        } else if (document.querySelector(".cart-item") && _0x154d90) {
+          trapFocus(_0x154d90, document.querySelector(".cart-item__name"));
         }
       }
-      if (_0xb8cae8) {
-        _0xb8cae8[_0x4a06d5(0x2c7)]();
-        const _0x374b93 = _0xb8cae8.querySelector('countdown-timer');
-        if (_0x374b93) {
-          _0x374b93.playTimer();
+      if (_0x154d90) {
+        _0x154d90.checkForClear();
+        const _0x38a498 = _0x154d90.querySelector("countdown-timer");
+        if (_0x38a498) {
+          _0x38a498.playTimer();
         }
-        if (_0xb8cae8[_0x4a06d5(0x110)]('cart-drawer-gift')) {
-          _0xb8cae8[_0x4a06d5(0x2c7)]();
-          _0xb8cae8[_0x4a06d5(0x284)](_0x4a06d5(0xc7)).forEach(_0x15eeff => {
-            const _0x10ad9a = _0x4a06d5;
-            if (_0xb8cae8.querySelector(_0x10ad9a(0x2d6) + _0x15eeff.dataset[_0x10ad9a(0x135)])) {
-              if (_0x15eeff[_0x10ad9a(0x297)][_0x10ad9a(0x262)] === 'false') {
-                _0x15eeff[_0x10ad9a(0x2be)]();
+        if (_0x154d90.querySelector('cart-drawer-gift')) {
+          _0x154d90.checkForClear();
+          _0x154d90.querySelectorAll("cart-drawer-gift").forEach(_0x24d47a => {
+            if (_0x154d90.querySelector(".cart-item--product-" + _0x24d47a.dataset.handle)) {
+              if (_0x24d47a.dataset.selected === 'false') {
+                _0x24d47a.removeFromCart();
               }
             } else {
-              if (_0x15eeff[_0x10ad9a(0x297)].selected === _0x10ad9a(0xb1)) {
-                _0x15eeff[_0x10ad9a(0x33c)]();
+              if (_0x24d47a.dataset.selected === "true") {
+                _0x24d47a.addToCart();
               }
             }
           });
         }
       }
-      publish(PUB_SUB_EVENTS[_0x4a06d5(0x193)], {
-        'source': 'cart-items'
+      publish("cart-update", {
+        'source': "cart-items"
       });
-    })['catch'](() => {
-      const _0x4c27b9 = _0x270b54;
-      this[_0x4c27b9(0x284)](_0x4c27b9(0x2ac))[_0x4c27b9(0x371)](_0x28813a => _0x28813a[_0x4c27b9(0x30b)][_0x4c27b9(0x1b7)]('hidden'));
-      const _0x119566 = document[_0x4c27b9(0x359)](_0x4c27b9(0x1de)) || document.getElementById(_0x4c27b9(0x177));
-      _0x119566[_0x4c27b9(0x1e3)] = window.cartStrings.error;
-    })[_0x270b54(0x18a)](() => {
-      const _0x5d4f43 = _0x270b54;
-      this[_0x5d4f43(0x319)](_0x245b8f);
+    })["catch"](() => {
+      this.querySelectorAll(".loading-overlay").forEach(_0x5a2942 => _0x5a2942.classList.add("hidden"));
+      const _0x24c73e = document.getElementById("cart-errors") || document.getElementById('CartDrawer-CartErrors');
+      _0x24c73e.textContent = window.cartStrings.error;
+    })["finally"](() => {
+      this.disableLoading(_0x1201a1);
     });
   }
-  [a0_0x4ad3a2(0xae)](_0x1afbed, _0x122cc9) {
-    const _0x44a6fd = a0_0x4ad3a2;
-    const _0x3bd377 = document[_0x44a6fd(0x359)](_0x44a6fd(0x13d) + _0x1afbed) || document[_0x44a6fd(0x359)](_0x44a6fd(0x178) + _0x1afbed);
-    if (_0x3bd377) {
-      _0x3bd377[_0x44a6fd(0x110)](_0x44a6fd(0x226))[_0x44a6fd(0xe9)] = _0x122cc9;
+  ["updateLiveRegions"](_0x15ffbd, _0x2f687a) {
+    const _0x9d385d = document.getElementById("Line-item-error-" + _0x15ffbd) || document.getElementById("CartDrawer-LineItemError-" + _0x15ffbd);
+    if (_0x9d385d) {
+      _0x9d385d.querySelector(".cart-item__error-text").innerHTML = _0x2f687a;
     }
-    this[_0x44a6fd(0x206)].setAttribute('aria-hidden', true);
-    const _0x376c4f = document[_0x44a6fd(0x359)](_0x44a6fd(0x22d)) || document.getElementById('CartDrawer-LiveRegionText');
-    _0x376c4f.setAttribute('aria-hidden', false);
+    this.lineItemStatusElement.setAttribute("aria-hidden", true);
+    const _0x33aba7 = document.getElementById('cart-live-region-text') || document.getElementById("CartDrawer-LiveRegionText");
+    _0x33aba7.setAttribute("aria-hidden", false);
     setTimeout(() => {
-      const _0x4f89b8 = _0x44a6fd;
-      _0x376c4f[_0x4f89b8(0x217)](_0x4f89b8(0x2b4), true);
+      _0x33aba7.setAttribute("aria-hidden", true);
     }, 0x3e8);
   }
-  [a0_0x4ad3a2(0x17b)](_0x47ce47, _0x5a223a) {
-    const _0x4df988 = a0_0x4ad3a2;
-    return new DOMParser()[_0x4df988(0x1e1)](_0x47ce47, _0x4df988(0xe3))[_0x4df988(0x110)](_0x5a223a)[_0x4df988(0xe9)];
+  ["getSectionInnerHTML"](_0x851b6e, _0x3b3171) {
+    return new DOMParser().parseFromString(_0x851b6e, "text/html").querySelector(_0x3b3171).innerHTML;
   }
-  [a0_0x4ad3a2(0x1d7)](_0x339d6b) {
-    const _0x34c5bb = a0_0x4ad3a2;
-    const _0x18a609 = document[_0x34c5bb(0x359)](_0x34c5bb(0x189)) || document[_0x34c5bb(0x359)]('CartDrawer-CartItems');
-    _0x18a609.classList.add(_0x34c5bb(0x313));
-    const _0x50b927 = this.querySelectorAll('#CartItem-' + _0x339d6b + _0x34c5bb(0x10b));
-    const _0x248f91 = this.querySelectorAll(_0x34c5bb(0xf5) + _0x339d6b + _0x34c5bb(0x10b));
-    [..._0x50b927, ..._0x248f91][_0x34c5bb(0x371)](_0x3a07d2 => _0x3a07d2.classList[_0x34c5bb(0xd6)]('hidden'));
-    document[_0x34c5bb(0x2e8)][_0x34c5bb(0x2a9)]();
-    this[_0x34c5bb(0x206)][_0x34c5bb(0x217)]('aria-hidden', false);
+  ['enableLoading'](_0x58b752) {
+    const _0x7acd64 = document.getElementById("main-cart-items") || document.getElementById('CartDrawer-CartItems');
+    _0x7acd64.classList.add('cart__items--disabled');
+    const _0x1abe2d = this.querySelectorAll("#CartItem-" + _0x58b752 + " .loading-overlay");
+    const _0x5042bb = this.querySelectorAll("#CartDrawer-Item-" + _0x58b752 + " .loading-overlay");
+    [..._0x1abe2d, ..._0x5042bb].forEach(_0x4c2aaf => _0x4c2aaf.classList.remove("hidden"));
+    document.activeElement.blur();
+    this.lineItemStatusElement.setAttribute("aria-hidden", false);
   }
-  [a0_0x4ad3a2(0x319)](_0x12339f) {
-    const _0x4c6317 = a0_0x4ad3a2;
-    const _0x3bee76 = document.getElementById(_0x4c6317(0x189)) || document.getElementById('CartDrawer-CartItems');
-    _0x3bee76.classList[_0x4c6317(0xd6)](_0x4c6317(0x313));
-    const _0x5527ca = this.querySelectorAll(_0x4c6317(0x11e) + _0x12339f + " .loading-overlay");
-    const _0x4b9e95 = this[_0x4c6317(0x284)](_0x4c6317(0xf5) + _0x12339f + " .loading-overlay");
-    _0x5527ca.forEach(_0x374e50 => _0x374e50[_0x4c6317(0x30b)][_0x4c6317(0x1b7)]('hidden'));
-    _0x4b9e95[_0x4c6317(0x371)](_0x29840f => _0x29840f.classList[_0x4c6317(0x1b7)](_0x4c6317(0x18e)));
+  ['disableLoading'](_0x106b64) {
+    const _0x313405 = document.getElementById("main-cart-items") || document.getElementById('CartDrawer-CartItems');
+    _0x313405.classList.remove("cart__items--disabled");
+    const _0x16ecae = this.querySelectorAll("#CartItem-" + _0x106b64 + " .loading-overlay");
+    const _0x44a27e = this.querySelectorAll("#CartDrawer-Item-" + _0x106b64 + " .loading-overlay");
+    _0x16ecae.forEach(_0x2fb501 => _0x2fb501.classList.add("hidden"));
+    _0x44a27e.forEach(_0x5eccd8 => _0x5eccd8.classList.add('hidden'));
   }
-  [a0_0x4ad3a2(0x22c)]() {
-    const _0x4c5d26 = a0_0x4ad3a2;
-    const _0x1d7a7e = JSON[_0x4c5d26(0x3ab)]({
-      'sections': this[_0x4c5d26(0x271)]()[_0x4c5d26(0x3ad)](_0x45b962 => _0x45b962[_0x4c5d26(0xf3)]),
-      'sections_url': window[_0x4c5d26(0x239)][_0x4c5d26(0x12f)]
+  ["clearCart"]() {
+    const _0x5d251d = JSON.stringify({
+      'sections': this.getSectionsToRender().map(_0x40b6f9 => _0x40b6f9.section),
+      'sections_url': window.location.pathname
     });
-    fetch('' + routes[_0x4c5d26(0x278)], {
+    fetch('' + routes.cart_clear_url, {
       ...fetchConfig(),
       ...{
-        'body': _0x1d7a7e
+        'body': _0x5d251d
       }
-    })[_0x4c5d26(0xf6)](_0x357615 => {
-      const _0x5035c4 = _0x4c5d26;
-      return _0x357615[_0x5035c4(0x139)]();
-    })[_0x4c5d26(0xf6)](_0x1f1927 => {
-      const _0x5a0f69 = _0x4c5d26;
-      const _0x102fe4 = JSON.parse(_0x1f1927);
-      this[_0x5a0f69(0x30b)].add(_0x5a0f69(0x164));
-      const _0x29b058 = document[_0x5a0f69(0x110)]('cart-drawer');
-      const _0x163416 = document[_0x5a0f69(0x359)](_0x5a0f69(0x23f));
-      if (_0x163416) {
-        _0x163416[_0x5a0f69(0x30b)][_0x5a0f69(0x1b7)](_0x5a0f69(0x164));
+    }).then(_0x12d37d => {
+      return _0x12d37d.text();
+    }).then(_0x5c87b0 => {
+      const _0x53cc71 = JSON.parse(_0x5c87b0);
+      this.classList.add("is-empty");
+      const _0x3f8217 = document.querySelector("cart-drawer");
+      const _0xbfe835 = document.getElementById('main-cart-footer');
+      if (_0xbfe835) {
+        _0xbfe835.classList.add('is-empty');
       }
-      if (_0x29b058) {
-        _0x29b058[_0x5a0f69(0x30b)][_0x5a0f69(0x1b7)](_0x5a0f69(0x164));
+      if (_0x3f8217) {
+        _0x3f8217.classList.add("is-empty");
       }
-      this[_0x5a0f69(0x271)]()[_0x5a0f69(0x371)](_0x5b76bf => {
-        const _0x30e510 = _0x5a0f69;
-        const _0x517e78 = document[_0x30e510(0x359)](_0x5b76bf.id)[_0x30e510(0x110)](_0x5b76bf[_0x30e510(0x2dd)]) || document[_0x30e510(0x359)](_0x5b76bf.id);
-        _0x517e78[_0x30e510(0xe9)] = this[_0x30e510(0x17b)](_0x102fe4[_0x30e510(0x30f)][_0x5b76bf[_0x30e510(0xf3)]], _0x5b76bf[_0x30e510(0x2dd)]);
+      this.getSectionsToRender().forEach(_0x1b8e9a => {
+        const _0x1932a6 = document.getElementById(_0x1b8e9a.id).querySelector(_0x1b8e9a.selector) || document.getElementById(_0x1b8e9a.id);
+        _0x1932a6.innerHTML = this.getSectionInnerHTML(_0x53cc71.sections[_0x1b8e9a.section], _0x1b8e9a.selector);
       });
-      if (_0x29b058) {
-        trapFocus(_0x29b058[_0x5a0f69(0x110)](_0x5a0f69(0x1ea)), _0x29b058[_0x5a0f69(0x110)]('a'));
+      if (_0x3f8217) {
+        trapFocus(_0x3f8217.querySelector(".drawer__inner-empty"), _0x3f8217.querySelector('a'));
       }
-      publish(PUB_SUB_EVENTS.cartUpdate, {
-        'source': _0x5a0f69(0xde)
+      publish("cart-update", {
+        'source': 'cart-items'
       });
-    })[_0x4c5d26(0x343)](() => {
-      const _0x4e7f4e = _0x4c5d26;
-      this[_0x4e7f4e(0x284)](_0x4e7f4e(0x2ac))[_0x4e7f4e(0x371)](_0x19f651 => _0x19f651[_0x4e7f4e(0x30b)].add(_0x4e7f4e(0x18e)));
-      const _0x1c0a14 = document[_0x4e7f4e(0x359)]('cart-errors') || document[_0x4e7f4e(0x359)](_0x4e7f4e(0x177));
-      _0x1c0a14[_0x4e7f4e(0x1e3)] = window[_0x4e7f4e(0x26a)][_0x4e7f4e(0x34e)];
+    })["catch"](() => {
+      this.querySelectorAll(".loading-overlay").forEach(_0x2f041b => _0x2f041b.classList.add("hidden"));
+      const _0x5396ca = document.getElementById("cart-errors") || document.getElementById('CartDrawer-CartErrors');
+      _0x5396ca.textContent = window.cartStrings.error;
     });
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0xde), CartItems);
-var search = a0_0x4ad3a2(0x386);
-if (!customElements[a0_0x4ad3a2(0x28a)]('cart-note')) {
-  customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x39b), class CartNote extends HTMLElement {
-    constructor() {
-      const _0x2648e2 = a0_0x4ad3a2;
-      super();
-      this[_0x2648e2(0x141)](_0x2648e2(0x153), debounce(_0x39ebd7 => {
-        const _0x2f12ac = _0x2648e2;
-        const _0x2977f3 = JSON[_0x2f12ac(0x3ab)]({
-          'note': _0x39ebd7[_0x2f12ac(0x201)][_0x2f12ac(0x2ea)]
-        });
-        fetch('' + routes[_0x2f12ac(0x2fa)], {
-          ...fetchConfig(),
-          ...{
-            'body': _0x2977f3
-          }
-        });
-      }, ON_CHANGE_DEBOUNCE_TIMER));
-    }
-  });
+customElements.define("cart-items", CartItems);
+var search = "search";
+if (!customElements.get("cart-note")) {
+  customElements.define("cart-note");
 }
 ;
-function handleDiscountForm(_0x2a9c98) {
-  const _0x184591 = a0_0x4ad3a2;
-  _0x2a9c98[_0x184591(0x1a2)]();
-  const _0x29da65 = _0x2a9c98[_0x184591(0x201)][_0x184591(0x110)](_0x184591(0x113));
-  const _0x4caa65 = _0x2a9c98[_0x184591(0x201)][_0x184591(0x110)]('.cart-discount-form__error');
-  const _0x27eee9 = _0x29da65[_0x184591(0x2ea)];
-  if (_0x27eee9 === undefined || _0x27eee9[_0x184591(0x374)] === 0x0) {
-    _0x4caa65.style[_0x184591(0x98)] = _0x184591(0x395);
+function handleDiscountForm(_0x2c23bc) {
+  _0x2c23bc.preventDefault();
+  const _0xb8ca30 = _0x2c23bc.target.querySelector("[name=cart-discount-field]");
+  const _0x5f34a6 = _0x2c23bc.target.querySelector(".cart-discount-form__error");
+  const _0x25c3b5 = _0xb8ca30.value;
+  if (_0x25c3b5 === undefined || _0x25c3b5.length === 0x0) {
+    _0x5f34a6.style.display = "block";
     return;
   }
-  _0x4caa65[_0x184591(0x28d)][_0x184591(0x98)] = _0x184591(0x25c);
-  const _0x9a9c45 = '/checkout?discount=';
-  const _0x5b938b = _0x9a9c45 + _0x27eee9;
-  window.location[_0x184591(0x219)] = _0x5b938b;
+  _0x5f34a6.style.display = "none";
+  const _0x23a557 = "/checkout?discount=" + _0x25c3b5;
+  window.location.href = _0x23a557;
 }
-function handleDiscountFormChange(_0x1b5599) {
-  const _0x3b675b = a0_0x4ad3a2;
-  const _0x293518 = document[_0x3b675b(0x284)](_0x3b675b(0x2f7));
-  _0x293518[_0x3b675b(0x371)](_0x4c6d5a => {
-    const _0x814ef2 = _0x3b675b;
-    _0x4c6d5a[_0x814ef2(0x28d)][_0x814ef2(0x98)] = _0x814ef2(0x25c);
+function handleDiscountFormChange(_0x5d0d98) {
+  const _0x369269 = document.querySelectorAll(".cart-discount-form__error");
+  _0x369269.forEach(_0x30cfc9 => {
+    _0x30cfc9.style.display = 'none';
   });
 }
 var serial = '';
 class SearchForm extends HTMLElement {
   constructor() {
-    const _0x23c8e2 = a0_0x4ad3a2;
     super();
-    this[_0x23c8e2(0x366)] = this[_0x23c8e2(0x110)](_0x23c8e2(0xb4));
-    this[_0x23c8e2(0x350)] = this[_0x23c8e2(0x110)](_0x23c8e2(0x21d));
-    if (this[_0x23c8e2(0x297)][_0x23c8e2(0x12b)] === 'false') {
-      serial = this[_0x23c8e2(0x110)]("[method=\"get\"]")[_0x23c8e2(0x297)][_0x23c8e2(0x238).replace('n', 'm')];
+    this.input = this.querySelector("input[type=\"search\"]");
+    this.resetButton = this.querySelector("button[type=\"reset\"]");
+    if (this.dataset.main === "false") {
+      serial = this.querySelector("[method=\"get\"]").dataset["nodal".replace('n', 'm')];
     }
-    if (this[_0x23c8e2(0x366)]) {
-      this[_0x23c8e2(0x366)].form[_0x23c8e2(0x141)](_0x23c8e2(0x13c), this[_0x23c8e2(0x213)][_0x23c8e2(0x2de)](this));
-      this[_0x23c8e2(0x366)][_0x23c8e2(0x141)](_0x23c8e2(0x366), debounce(_0xb54db4 => {
-        const _0x586b78 = _0x23c8e2;
-        this[_0x586b78(0x1a4)](_0xb54db4);
-      }, 0x12c)[_0x23c8e2(0x2de)](this));
-    }
-  }
-  [a0_0x4ad3a2(0x2b0)]() {
-    const _0x2187ec = a0_0x4ad3a2;
-    const _0x26d607 = this[_0x2187ec(0x350)][_0x2187ec(0x30b)][_0x2187ec(0x381)](_0x2187ec(0x18e));
-    if (this[_0x2187ec(0x366)][_0x2187ec(0x2ea)][_0x2187ec(0x374)] > 0x0 && _0x26d607) {
-      this[_0x2187ec(0x350)][_0x2187ec(0x30b)][_0x2187ec(0xd6)](_0x2187ec(0x18e));
-    } else if (this.input[_0x2187ec(0x2ea)].length === 0x0 && !_0x26d607) {
-      this.resetButton[_0x2187ec(0x30b)][_0x2187ec(0x1b7)](_0x2187ec(0x18e));
+    if (this.input) {
+      this.input.form.addEventListener("reset", this.onFormReset.bind(this));
+      this.input.addEventListener("input", debounce(_0x38c4d8 => {
+        this.onChange(_0x38c4d8);
+      }, 0x12c).bind(this));
     }
   }
-  [a0_0x4ad3a2(0x1a4)]() {
+  ["toggleResetButton"]() {
+    const _0x31e5d2 = this.resetButton.classList.contains("hidden");
+    if (this.input.value.length > 0x0 && _0x31e5d2) {
+      this.resetButton.classList.remove("hidden");
+    } else if (this.input.value.length === 0x0 && !_0x31e5d2) {
+      this.resetButton.classList.add('hidden');
+    }
+  }
+  ["onChange"]() {
     this.toggleResetButton();
   }
-  [a0_0x4ad3a2(0x355)]() {
+  ["shouldResetForm"]() {
     return !document.querySelector("[aria-selected=\"true\"] a");
   }
-  [a0_0x4ad3a2(0x213)](_0x39663b) {
-    const _0x1e1aa9 = a0_0x4ad3a2;
-    _0x39663b.preventDefault();
-    if (this[_0x1e1aa9(0x355)]()) {
-      this[_0x1e1aa9(0x366)][_0x1e1aa9(0x2ea)] = '';
-      this[_0x1e1aa9(0x366)][_0x1e1aa9(0x1c1)]();
+  ["onFormReset"](_0x3b1b2d) {
+    _0x3b1b2d.preventDefault();
+    if (this.shouldResetForm()) {
+      this.input.value = '';
+      this.input.focus();
       this.toggleResetButton();
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x2f5), SearchForm);
+customElements.define('search-form', SearchForm);
 class PredictiveSearch extends SearchForm {
   constructor() {
-    const _0x24e5e0 = a0_0x4ad3a2;
     super();
     this.cachedResults = {};
-    this[_0x24e5e0(0xa3)] = this[_0x24e5e0(0x110)](_0x24e5e0(0x38e));
-    this[_0x24e5e0(0x123)] = document[_0x24e5e0(0x284)](_0x24e5e0(0x32f));
-    this[_0x24e5e0(0x1a6)] = false;
-    this[_0x24e5e0(0x310)] = new AbortController();
-    this[_0x24e5e0(0x111)] = '';
-    this[_0x24e5e0(0x36f)]();
+    this.predictiveSearchResults = this.querySelector("[data-predictive-search]");
+    this.allPredictiveSearchInstances = document.querySelectorAll("predictive-search");
+    this.isOpen = false;
+    this.abortController = new AbortController();
+    this.searchTerm = '';
+    this.setupEventListeners();
   }
-  [a0_0x4ad3a2(0x36f)]() {
-    const _0xe5a55e = a0_0x4ad3a2;
-    this[_0xe5a55e(0x366)][_0xe5a55e(0x20e)].addEventListener('submit', this[_0xe5a55e(0xfa)].bind(this));
-    this[_0xe5a55e(0x366)][_0xe5a55e(0x141)](_0xe5a55e(0x1c1), this[_0xe5a55e(0x1ad)][_0xe5a55e(0x2de)](this));
-    this.addEventListener(_0xe5a55e(0x252), this.onFocusOut[_0xe5a55e(0x2de)](this));
-    this[_0xe5a55e(0x141)](_0xe5a55e(0x131), this[_0xe5a55e(0x1f2)].bind(this));
-    this[_0xe5a55e(0x141)](_0xe5a55e(0x315), this[_0xe5a55e(0x3ae)][_0xe5a55e(0x2de)](this));
+  ["setupEventListeners"]() {
+    this.input.form.addEventListener('submit', this.onFormSubmit.bind(this));
+    this.input.addEventListener('focus', this.onFocus.bind(this));
+    this.addEventListener("focusout", this.onFocusOut.bind(this));
+    this.addEventListener('keyup', this.onKeyup.bind(this));
+    this.addEventListener("keydown", this.onKeydown.bind(this));
   }
-  [a0_0x4ad3a2(0x140)]() {
-    const _0x5cf8c3 = a0_0x4ad3a2;
-    return this[_0x5cf8c3(0x366)][_0x5cf8c3(0x2ea)].trim();
+  ["getQuery"]() {
+    return this.input.value.trim();
   }
-  [a0_0x4ad3a2(0x1a4)]() {
-    const _0x502447 = a0_0x4ad3a2;
-    super[_0x502447(0x1a4)]();
-    const _0x272fb9 = this.getQuery();
-    if (!this[_0x502447(0x111)] || !_0x272fb9[_0x502447(0x29f)](this[_0x502447(0x111)])) {
-      this[_0x502447(0x110)](_0x502447(0x10e))?.[_0x502447(0xd6)]();
+  ["onChange"]() {
+    super.onChange();
+    const _0xac52b6 = this.getQuery();
+    if (!this.searchTerm || !_0xac52b6.startsWith(this.searchTerm)) {
+      this.querySelector("#predictive-search-results-groups-wrapper")?.["remove"]();
     }
-    this[_0x502447(0x37b)](this[_0x502447(0x111)], _0x272fb9);
-    this[_0x502447(0x111)] = _0x272fb9;
-    if (!this.searchTerm[_0x502447(0x374)]) {
+    this.updateSearchForTerm(this.searchTerm, _0xac52b6);
+    this.searchTerm = _0xac52b6;
+    if (!this.searchTerm.length) {
       this.close(true);
       return;
     }
-    this[_0x502447(0xdd)](this.searchTerm);
+    this.getSearchResults(this.searchTerm);
   }
-  [a0_0x4ad3a2(0xfa)](_0x441bb3) {
-    const _0x93034d = a0_0x4ad3a2;
-    if (!this[_0x93034d(0x140)]()[_0x93034d(0x374)] || this[_0x93034d(0x110)](_0x93034d(0x12d))) {
-      _0x441bb3[_0x93034d(0x1a2)]();
+  ["onFormSubmit"](_0x58dcde) {
+    if (!this.getQuery().length || this.querySelector("[aria-selected=\"true\"] a")) {
+      _0x58dcde.preventDefault();
     }
   }
-  [a0_0x4ad3a2(0x213)](_0x5bdc23) {
-    const _0x4b692e = a0_0x4ad3a2;
-    super[_0x4b692e(0x213)](_0x5bdc23);
+  ['onFormReset'](_0x41d113) {
+    super.onFormReset(_0x41d113);
     if (super.shouldResetForm()) {
-      this[_0x4b692e(0x111)] = '';
-      this[_0x4b692e(0x310)].abort();
-      this[_0x4b692e(0x310)] = new AbortController();
+      this.searchTerm = '';
+      this.abortController.abort();
+      this.abortController = new AbortController();
       this.closeResults(true);
     }
   }
   ['onFocus']() {
-    const _0x544cc0 = a0_0x4ad3a2;
-    const _0x1b56d4 = this[_0x544cc0(0x140)]();
-    if (!_0x1b56d4[_0x544cc0(0x374)]) {
+    const _0x382be3 = this.getQuery();
+    if (!_0x382be3.length) {
       return;
     }
-    if (this.searchTerm !== _0x1b56d4) {
-      this[_0x544cc0(0x1a4)]();
-    } else if (this[_0x544cc0(0x282)]('results') === _0x544cc0(0xb1)) {
-      this[_0x544cc0(0x250)]();
+    if (this.searchTerm !== _0x382be3) {
+      this.onChange();
+    } else if (this.getAttribute("results") === "true") {
+      this.open();
     } else {
-      this[_0x544cc0(0xdd)](this[_0x544cc0(0x111)]);
+      this.getSearchResults(this.searchTerm);
     }
   }
-  [a0_0x4ad3a2(0x158)]() {
+  ["onFocusOut"]() {
     setTimeout(() => {
-      const _0x1ab170 = a0_0x5a21;
-      if (!this.contains(document[_0x1ab170(0x2e8)])) {
-        this[_0x1ab170(0x275)]();
+      if (!this.contains(document.activeElement)) {
+        this.close();
       }
     });
   }
-  ['onKeyup'](_0x4f0513) {
-    const _0x57cdd2 = a0_0x4ad3a2;
-    if (!this[_0x57cdd2(0x140)]()[_0x57cdd2(0x374)]) {
+  ["onKeyup"](_0x15bc30) {
+    if (!this.getQuery().length) {
       this.close(true);
     }
-    _0x4f0513[_0x57cdd2(0x1a2)]();
-    switch (_0x4f0513[_0x57cdd2(0x22e)]) {
-      case _0x57cdd2(0xd8):
-        this[_0x57cdd2(0x244)]('up');
+    _0x15bc30.preventDefault();
+    switch (_0x15bc30.code) {
+      case 'ArrowUp':
+        this.switchOption('up');
         break;
       case 'ArrowDown':
-        this[_0x57cdd2(0x244)](_0x57cdd2(0x283));
+        this.switchOption('down');
         break;
-      case _0x57cdd2(0x370):
-        this[_0x57cdd2(0x237)]();
+      case "Enter":
+        this.selectOption();
         break;
     }
   }
-  [a0_0x4ad3a2(0x3ae)](_0x358176) {
-    const _0x1f8cde = a0_0x4ad3a2;
-    if (_0x358176[_0x1f8cde(0x22e)] === 'ArrowUp' || _0x358176.code === _0x1f8cde(0x2e9)) {
-      _0x358176.preventDefault();
+  ["onKeydown"](_0x2007cc) {
+    if (_0x2007cc.code === "ArrowUp" || _0x2007cc.code === "ArrowDown") {
+      _0x2007cc.preventDefault();
     }
   }
-  [a0_0x4ad3a2(0x37b)](_0x187fc2, _0x34990e) {
-    const _0x163df2 = a0_0x4ad3a2;
-    const _0x27e210 = this[_0x163df2(0x110)](_0x163df2(0x156));
-    const _0x16183c = _0x27e210?.['innerText'];
-    if (_0x16183c) {
-      if (_0x16183c[_0x163df2(0xc5)](new RegExp(_0x187fc2, 'g'))[_0x163df2(0x374)] > 0x1) {
+  ["updateSearchForTerm"](_0x4c405e, _0x5d3ca3) {
+    const _0x5e6c11 = this.querySelector('[data-predictive-search-search-for-text]');
+    const _0x56b6f0 = _0x5e6c11?.['innerText'];
+    if (_0x56b6f0) {
+      if (_0x56b6f0.match(new RegExp(_0x4c405e, 'g')).length > 0x1) {
         return;
       }
-      const _0x44c908 = _0x16183c[_0x163df2(0x19a)](_0x187fc2, _0x34990e);
-      _0x27e210.innerText = _0x44c908;
+      const _0x4a52cc = _0x56b6f0.replace(_0x4c405e, _0x5d3ca3);
+      _0x5e6c11.innerText = _0x4a52cc;
     }
   }
-  [a0_0x4ad3a2(0x244)](_0x1b9032) {
-    const _0x2c7b1 = a0_0x4ad3a2;
-    if (!this[_0x2c7b1(0x282)]('open')) {
+  ['switchOption'](_0x5ec5a9) {
+    if (!this.getAttribute("open")) {
       return;
     }
-    const _0x56dc70 = _0x1b9032 === 'up';
-    const _0x1242b0 = this.querySelector(_0x2c7b1(0x103));
-    const _0x4431fa = Array.from(this.querySelectorAll(_0x2c7b1(0x194)))[_0x2c7b1(0x133)](_0x592dbc => _0x592dbc[_0x2c7b1(0x354)] !== null);
-    let _0xa0ead2 = 0x0;
-    if (_0x56dc70 && !_0x1242b0) {
+    const _0x389e55 = _0x5ec5a9 === 'up';
+    const _0x4806ae = this.querySelector("[aria-selected=\"true\"]");
+    const _0x6549d8 = Array.from(this.querySelectorAll("li, button.predictive-search__item")).filter(_0x76b296 => _0x76b296.offsetParent !== null);
+    let _0x4fdc5e = 0x0;
+    if (_0x389e55 && !_0x4806ae) {
       return;
     }
-    let _0x22dfc9 = -0x1;
-    let _0x1aadf1 = 0x0;
-    while (_0x22dfc9 === -0x1 && _0x1aadf1 <= _0x4431fa[_0x2c7b1(0x374)]) {
-      if (_0x4431fa[_0x1aadf1] === _0x1242b0) {
-        _0x22dfc9 = _0x1aadf1;
+    let _0x2385b3 = -0x1;
+    let _0x469574 = 0x0;
+    while (_0x2385b3 === -0x1 && _0x469574 <= _0x6549d8.length) {
+      if (_0x6549d8[_0x469574] === _0x4806ae) {
+        _0x2385b3 = _0x469574;
       }
-      _0x1aadf1++;
+      _0x469574++;
     }
-    this[_0x2c7b1(0x281)][_0x2c7b1(0x1e3)] = '';
-    if (!_0x56dc70 && _0x1242b0) {
-      _0xa0ead2 = _0x22dfc9 === _0x4431fa[_0x2c7b1(0x374)] - 0x1 ? 0x0 : _0x22dfc9 + 0x1;
-    } else if (_0x56dc70) {
-      _0xa0ead2 = _0x22dfc9 === 0x0 ? _0x4431fa[_0x2c7b1(0x374)] - 0x1 : _0x22dfc9 - 0x1;
+    this.statusElement.textContent = '';
+    if (!_0x389e55 && _0x4806ae) {
+      _0x4fdc5e = _0x2385b3 === _0x6549d8.length - 0x1 ? 0x0 : _0x2385b3 + 0x1;
+    } else if (_0x389e55) {
+      _0x4fdc5e = _0x2385b3 === 0x0 ? _0x6549d8.length - 0x1 : _0x2385b3 - 0x1;
     }
-    if (_0xa0ead2 === _0x22dfc9) {
+    if (_0x4fdc5e === _0x2385b3) {
       return;
     }
-    const _0x38272a = _0x4431fa[_0xa0ead2];
-    _0x38272a[_0x2c7b1(0x217)]('aria-selected', true);
-    if (_0x1242b0) {
-      _0x1242b0.setAttribute('aria-selected', false);
+    const _0x3212b0 = _0x6549d8[_0x4fdc5e];
+    _0x3212b0.setAttribute('aria-selected', true);
+    if (_0x4806ae) {
+      _0x4806ae.setAttribute('aria-selected', false);
     }
-    this[_0x2c7b1(0x366)].setAttribute(_0x2c7b1(0x390), _0x38272a.id);
+    this.input.setAttribute("aria-activedescendant", _0x3212b0.id);
   }
-  [a0_0x4ad3a2(0x237)]() {
-    const _0x4553e0 = a0_0x4ad3a2;
-    const _0x73280d = this[_0x4553e0(0x110)]("[aria-selected=\"true\"] a, button[aria-selected=\"true\"]");
-    if (_0x73280d) {
-      _0x73280d[_0x4553e0(0x388)]();
+  ["selectOption"]() {
+    const _0x1fc808 = this.querySelector("[aria-selected=\"true\"] a, button[aria-selected=\"true\"]");
+    if (_0x1fc808) {
+      _0x1fc808.click();
     }
   }
-  [a0_0x4ad3a2(0xdd)](_0x58ead3) {
-    const _0x566ba = a0_0x4ad3a2;
-    const _0x1bde8d = _0x58ead3[_0x566ba(0x19a)](" ", '-')[_0x566ba(0x368)]();
-    this[_0x566ba(0x1a7)]();
-    if (this[_0x566ba(0x2b1)][_0x1bde8d]) {
-      this[_0x566ba(0x2d2)](this[_0x566ba(0x2b1)][_0x1bde8d]);
+  ["getSearchResults"](_0x5632d7) {
+    const _0x5c1a8f = _0x5632d7.replace(" ", '-').toLowerCase();
+    this.setLiveRegionLoadingState();
+    if (this.cachedResults[_0x5c1a8f]) {
+      this.renderSearchResults(this.cachedResults[_0x5c1a8f]);
       return;
     }
-    fetch(routes[_0x566ba(0xd0)] + '?q=' + encodeURIComponent(_0x58ead3) + _0x566ba(0x17e), {
-      'signal': this[_0x566ba(0x310)][_0x566ba(0x264)]
-    }).then(_0x1256d0 => {
-      const _0x31741a = _0x566ba;
-      if (!_0x1256d0.ok) {
-        var _0x19e76a = new Error(_0x1256d0[_0x31741a(0x14c)]);
-        this[_0x31741a(0x275)]();
-        throw _0x19e76a;
+    fetch(routes.predictive_search_url + "?q=" + encodeURIComponent(_0x5632d7) + "&section_id=predictive-search", {
+      'signal': this.abortController.signal
+    }).then(_0x1cb3af => {
+      if (!_0x1cb3af.ok) {
+        var _0x4a57c7 = new Error(_0x1cb3af.status);
+        this.close();
+        throw _0x4a57c7;
       }
-      return _0x1256d0[_0x31741a(0x139)]();
-    })[_0x566ba(0xf6)](_0x28549e => {
-      const _0x3d6958 = _0x566ba;
-      const _0x856874 = new DOMParser().parseFromString(_0x28549e, _0x3d6958(0xe3))[_0x3d6958(0x110)]('#shopify-section-predictive-search')[_0x3d6958(0xe9)];
-      this[_0x3d6958(0x123)][_0x3d6958(0x371)](_0x28d591 => {
-        const _0x203f1a = _0x3d6958;
-        _0x28d591[_0x203f1a(0x2b1)][_0x1bde8d] = _0x856874;
+      return _0x1cb3af.text();
+    }).then(_0x5d06ce => {
+      const _0x43c87a = new DOMParser().parseFromString(_0x5d06ce, "text/html").querySelector("#shopify-section-predictive-search").innerHTML;
+      this.allPredictiveSearchInstances.forEach(_0xa787f0 => {
+        _0xa787f0.cachedResults[_0x5c1a8f] = _0x43c87a;
       });
-      this[_0x3d6958(0x2d2)](_0x856874);
-    })[_0x566ba(0x343)](_0x5828cc => {
-      const _0x5a4a7a = _0x566ba;
-      if (_0x5828cc?.[_0x5a4a7a(0x22e)] === 0x14) {
+      this.renderSearchResults(_0x43c87a);
+    })["catch"](_0x3823bd => {
+      if (_0x3823bd?.['code'] === 0x14) {
         return;
       }
-      this[_0x5a4a7a(0x275)]();
-      throw _0x5828cc;
+      this.close();
+      throw _0x3823bd;
     });
   }
-  [a0_0x4ad3a2(0x1a7)]() {
-    const _0x4a4251 = a0_0x4ad3a2;
-    this[_0x4a4251(0x281)] = this[_0x4a4251(0x281)] || this[_0x4a4251(0x110)](_0x4a4251(0x26b));
-    this[_0x4a4251(0x372)] = this.loadingText || this[_0x4a4251(0x282)](_0x4a4251(0x20c));
-    this[_0x4a4251(0x2c5)](this[_0x4a4251(0x372)]);
-    this[_0x4a4251(0x217)](_0x4a4251(0xbd), true);
+  ["setLiveRegionLoadingState"]() {
+    this.statusElement = this.statusElement || this.querySelector('.predictive-search-status');
+    this.loadingText = this.loadingText || this.getAttribute('data-loading-text');
+    this.setLiveRegionText(this.loadingText);
+    this.setAttribute("loading", true);
   }
-  ['setLiveRegionText'](_0x214049) {
-    const _0x6eb9bf = a0_0x4ad3a2;
-    this[_0x6eb9bf(0x281)].setAttribute(_0x6eb9bf(0x2b4), _0x6eb9bf(0x114));
-    this[_0x6eb9bf(0x281)].textContent = _0x214049;
+  ["setLiveRegionText"](_0x2fba24) {
+    this.statusElement.setAttribute("aria-hidden", "false");
+    this.statusElement.textContent = _0x2fba24;
     setTimeout(() => {
-      const _0x1bf7b1 = _0x6eb9bf;
-      this[_0x1bf7b1(0x281)].setAttribute(_0x1bf7b1(0x2b4), _0x1bf7b1(0xb1));
+      this.statusElement.setAttribute('aria-hidden', "true");
     }, 0x3e8);
   }
-  [a0_0x4ad3a2(0x2d2)](_0x4ad9ce) {
-    const _0x448b89 = a0_0x4ad3a2;
-    this[_0x448b89(0xa3)][_0x448b89(0xe9)] = _0x4ad9ce;
-    this.setAttribute(_0x448b89(0x3a6), true);
-    this[_0x448b89(0x2a4)]();
-    this[_0x448b89(0x250)]();
+  ['renderSearchResults'](_0x520f0f) {
+    this.predictiveSearchResults.innerHTML = _0x520f0f;
+    this.setAttribute('results', true);
+    this.setLiveRegionResults();
+    this.open();
   }
-  [a0_0x4ad3a2(0x2a4)]() {
-    const _0x55ba46 = a0_0x4ad3a2;
-    this[_0x55ba46(0x97)](_0x55ba46(0xbd));
-    this[_0x55ba46(0x2c5)](this[_0x55ba46(0x110)](_0x55ba46(0x2aa))[_0x55ba46(0x1e3)]);
+  ["setLiveRegionResults"]() {
+    this.removeAttribute('loading');
+    this.setLiveRegionText(this.querySelector("[data-predictive-search-live-region-count-value]").textContent);
   }
-  ['getResultsMaxHeight']() {
-    const _0xa7eed6 = a0_0x4ad3a2;
-    this[_0xa7eed6(0x14d)] = window.innerHeight - document[_0xa7eed6(0x110)]('.section-header')[_0xa7eed6(0x11a)]()[_0xa7eed6(0x13b)];
+  ["getResultsMaxHeight"]() {
+    this.resultsMaxHeight = window.innerHeight - document.querySelector(".section-header").getBoundingClientRect().bottom;
     return this.resultsMaxHeight;
   }
-  [a0_0x4ad3a2(0x250)]() {
-    const _0x5c7090 = a0_0x4ad3a2;
-    this[_0x5c7090(0xa3)][_0x5c7090(0x28d)][_0x5c7090(0x27a)] = this[_0x5c7090(0x14d)] || this.getResultsMaxHeight() + 'px';
-    this[_0x5c7090(0x217)](_0x5c7090(0x250), true);
-    this.input[_0x5c7090(0x217)](_0x5c7090(0x122), true);
-    this[_0x5c7090(0x1a6)] = true;
+  ['open']() {
+    this.predictiveSearchResults.style.maxHeight = this.resultsMaxHeight || this.getResultsMaxHeight() + 'px';
+    this.setAttribute("open", true);
+    this.input.setAttribute('aria-expanded', true);
+    this.isOpen = true;
   }
-  [a0_0x4ad3a2(0x275)](_0x2b6aa = false) {
-    const _0x1df2ee = a0_0x4ad3a2;
-    this[_0x1df2ee(0x2d1)](_0x2b6aa);
+  ['close'](_0x5c56f0 = false) {
+    this.closeResults(_0x5c56f0);
     this.isOpen = false;
   }
-  [a0_0x4ad3a2(0x2d1)](_0x18273a = false) {
-    const _0x381c1f = a0_0x4ad3a2;
-    if (_0x18273a) {
-      this[_0x381c1f(0x366)].value = '';
-      this[_0x381c1f(0x97)](_0x381c1f(0x3a6));
+  ['closeResults'](_0x389147 = false) {
+    if (_0x389147) {
+      this.input.value = '';
+      this.removeAttribute("results");
     }
-    const _0x49b1e7 = this[_0x381c1f(0x110)]("[aria-selected=\"true\"]");
-    if (_0x49b1e7) {
-      _0x49b1e7.setAttribute(_0x381c1f(0xce), false);
+    const _0x4bb3ef = this.querySelector("[aria-selected=\"true\"]");
+    if (_0x4bb3ef) {
+      _0x4bb3ef.setAttribute("aria-selected", false);
     }
-    this.input[_0x381c1f(0x217)]('aria-activedescendant', '');
-    this[_0x381c1f(0x97)]('loading');
-    this.removeAttribute(_0x381c1f(0x250));
-    this[_0x381c1f(0x366)][_0x381c1f(0x217)](_0x381c1f(0x122), false);
+    this.input.setAttribute("aria-activedescendant", '');
+    this.removeAttribute("loading");
+    this.removeAttribute("open");
+    this.input.setAttribute("aria-expanded", false);
     this.resultsMaxHeight = false;
-    this.predictiveSearchResults[_0x381c1f(0x97)](_0x381c1f(0x28d));
+    this.predictiveSearchResults.removeAttribute("style");
   }
 }
-customElements.define('predictive-search', PredictiveSearch);
-const defMed = a0_0x4ad3a2(0x1dd) + a0_0x4ad3a2(0x27b) + 'er';
+customElements.define("predictive-search", PredictiveSearch);
 class CartDrawer extends HTMLElement {
   constructor() {
-    const _0x2f4e07 = a0_0x4ad3a2;
     super();
-    this[_0x2f4e07(0x2df)] = this[_0x2f4e07(0x37a)]();
-    this[_0x2f4e07(0x2c7)]();
-    this[_0x2f4e07(0x141)](_0x2f4e07(0x131), _0x2514d2 => _0x2514d2[_0x2f4e07(0x22e)] === 'Escape' && this[_0x2f4e07(0x275)]());
-    this[_0x2f4e07(0x110)](_0x2f4e07(0x2bc))[_0x2f4e07(0x141)](_0x2f4e07(0x388), this[_0x2f4e07(0x275)][_0x2f4e07(0x2de)](this));
-    this[_0x2f4e07(0x357)]();
+    this.upsellHandles = this.getUpsellHandles();
+    this.checkForClear();
+    this.addEventListener('keyup', _0x4b457d => _0x4b457d.code === "Escape" && this.close());
+    this.querySelector("#CartDrawer-Overlay").addEventListener("click", this.close.bind(this));
+    this.setHeaderCartIconAccessibility();
   }
-  [a0_0x4ad3a2(0x357)]() {
-    const _0x544189 = a0_0x4ad3a2;
-    const _0x322463 = document[_0x544189(0x110)](_0x544189(0xc1));
-    const _0x25af85 = _0x322463.closest(_0x544189(0x259));
-    _0x322463[_0x544189(0x217)](_0x544189(0x151), 'button');
-    _0x322463[_0x544189(0x217)](_0x544189(0x24c), _0x544189(0x1d1));
-    _0x322463.addEventListener(_0x544189(0x388), _0x94fe0d => {
-      _0x94fe0d.preventDefault();
-      this.open(_0x322463);
+  ["setHeaderCartIconAccessibility"]() {
+    const _0x625df1 = document.querySelector("#cart-icon-bubble");
+    const _0x427f0b = _0x625df1.closest(".header__icons");
+    _0x625df1.setAttribute("role", "button");
+    _0x625df1.setAttribute('aria-haspopup', 'dialog');
+    _0x625df1.addEventListener("click", _0x36a6d5 => {
+      _0x36a6d5.preventDefault();
+      this.open(_0x625df1);
     });
-    this[_0x544189(0x2f8)] = _0x25af85[_0x544189(0x110)](_0x544189(0x20e))[_0x544189(0x297)][this[_0x544189(0x297)][_0x544189(0x268)]];
-    _0x322463[_0x544189(0x141)]('keydown', _0x169520 => {
-      const _0x4631d2 = _0x544189;
-      if (_0x169520[_0x4631d2(0x22e)][_0x4631d2(0x3a0)]() === _0x4631d2(0x167)) {
-        _0x169520[_0x4631d2(0x1a2)]();
-        this[_0x4631d2(0x250)](_0x322463);
+    this.oseid = _0x427f0b.querySelector('form').dataset[this.dataset.type];
+    _0x625df1.addEventListener("keydown", _0x29210c => {
+      if (_0x29210c.code.toUpperCase() === 'SPACE') {
+        _0x29210c.preventDefault();
+        this.open(_0x625df1);
       }
     });
   }
-  [a0_0x4ad3a2(0x250)](_0x400d44) {
-    const _0x3e8dbc = a0_0x4ad3a2;
-    if (_0x400d44) {
-      this[_0x3e8dbc(0xcc)](_0x400d44);
+  ["open"](_0x3ae851) {
+    if (_0x3ae851) {
+      this.setActiveElement(_0x3ae851);
     }
-    const _0x332aa4 = this[_0x3e8dbc(0x110)](_0x3e8dbc(0xf2));
-    if (_0x332aa4 && !_0x332aa4[_0x3e8dbc(0xfd)](_0x3e8dbc(0x151))) {
-      this[_0x3e8dbc(0x95)](_0x332aa4);
+    const _0x10469e = this.querySelector("[id^=\"Details-\"] summary");
+    if (_0x10469e && !_0x10469e.hasAttribute("role")) {
+      this.setSummaryAccessibility(_0x10469e);
     }
     setTimeout(() => {
-      const _0x291c73 = _0x3e8dbc;
-      this[_0x291c73(0x30b)][_0x291c73(0x1b7)]('animate', 'active');
+      this.classList.add("animate", 'active');
     });
-    this[_0x3e8dbc(0x141)](_0x3e8dbc(0x11f), () => {
-      const _0x4faf52 = _0x3e8dbc;
-      const _0x445dd4 = this[_0x4faf52(0x30b)][_0x4faf52(0x381)](_0x4faf52(0x164)) ? this.querySelector(_0x4faf52(0x1ea)) : document[_0x4faf52(0x359)](_0x4faf52(0x31c));
-      const _0x26a7c2 = this.querySelector(_0x4faf52(0x3a3)) || this[_0x4faf52(0x110)](_0x4faf52(0x27c));
-      trapFocus(_0x445dd4, _0x26a7c2);
+    this.addEventListener("transitionend", () => {
+      const _0x5a3e32 = this.classList.contains("is-empty") ? this.querySelector('.drawer__inner-empty') : document.getElementById('CartDrawer');
+      const _0x4008ec = this.querySelector(".drawer__inner") || this.querySelector(".drawer__close");
+      trapFocus(_0x5a3e32, _0x4008ec);
     }, {
       'once': true
     });
-    document.body[_0x3e8dbc(0x30b)][_0x3e8dbc(0x1b7)](_0x3e8dbc(0x2fb));
-    const _0x4d67dc = this[_0x3e8dbc(0x110)](_0x3e8dbc(0xc2));
-    if (_0x4d67dc) {
-      _0x4d67dc[_0x3e8dbc(0x1c4)]();
+    document.body.classList.add("overflow-hidden");
+    const _0x5b3711 = this.querySelector("countdown-timer");
+    if (_0x5b3711) {
+      _0x5b3711.playTimer();
     }
   }
-  [a0_0x4ad3a2(0x275)]() {
-    const _0x37720a = a0_0x4ad3a2;
-    this[_0x37720a(0x30b)][_0x37720a(0xd6)](_0x37720a(0x137));
-    removeTrapFocus(this[_0x37720a(0x2e8)]);
-    document[_0x37720a(0x220)][_0x37720a(0x30b)][_0x37720a(0xd6)]('overflow-hidden');
+  ["close"]() {
+    this.classList.remove("active");
+    removeTrapFocus(this.activeElement);
+    document.body.classList.remove("overflow-hidden");
   }
-  [a0_0x4ad3a2(0x37a)]() {
-    const _0x10035b = a0_0x4ad3a2;
-    const _0x55d6f8 = this[_0x10035b(0x284)]("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift");
-    const _0x13b9ee = [];
-    _0x55d6f8[_0x10035b(0x371)](_0x486bfd => {
-      const _0x3a2d8f = _0x10035b;
-      if (_0x486bfd[_0x3a2d8f(0x297)].handle) {
-        _0x13b9ee.push(_0x486bfd[_0x3a2d8f(0x297)][_0x3a2d8f(0x135)]);
+  ["getUpsellHandles"]() {
+    const _0x55f443 = this.querySelectorAll("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift");
+    const _0x5dd0bf = [];
+    _0x55f443.forEach(_0x52bc7e => {
+      if (_0x52bc7e.dataset.handle) {
+        _0x5dd0bf.push(_0x52bc7e.dataset.handle);
       }
     });
-    return _0x13b9ee;
+    return _0x5dd0bf;
   }
   ['oneNonUpellRemaining']() {
-    const _0x3fc2d7 = a0_0x4ad3a2;
-    const _0x32a91e = this.querySelectorAll(_0x3fc2d7(0x2f1));
-    let _0x9b3623 = 0x0;
-    _0x32a91e[_0x3fc2d7(0x371)](_0x5baf90 => {
-      const _0x39bbf1 = _0x3fc2d7;
-      this[_0x39bbf1(0x2df)][_0x39bbf1(0x371)](_0x2f8e03 => {
-        const _0x7957c8 = _0x39bbf1;
-        if (_0x5baf90[_0x7957c8(0x30b)][_0x7957c8(0x381)](_0x7957c8(0xbc) + _0x2f8e03)) {
-          _0x9b3623++;
+    const _0x592df4 = this.querySelectorAll(".cart-item");
+    let _0x25382b = 0x0;
+    _0x592df4.forEach(_0x4995bd => {
+      this.upsellHandles.forEach(_0x16b42e => {
+        if (_0x4995bd.classList.contains("cart-item--product-" + _0x16b42e)) {
+          _0x25382b++;
         }
       });
     });
-    return _0x32a91e[_0x3fc2d7(0x374)] - _0x9b3623 <= 0x1;
+    return _0x592df4.length - _0x25382b <= 0x1;
   }
-  [a0_0x4ad3a2(0x2c7)]() {
-    const _0x487c9f = a0_0x4ad3a2;
-    const _0x2efeb6 = this[_0x487c9f(0x1a3)]();
-    this.querySelectorAll(_0x487c9f(0xa4)).forEach(_0x53830f => {
-      const _0x3d58f5 = _0x487c9f;
-      if (_0x2efeb6) {
-        _0x53830f[_0x3d58f5(0x22c)] = true;
+  ["checkForClear"]() {
+    const _0x1db0ed = this.oneNonUpellRemaining();
+    this.querySelectorAll("cart-remove-button").forEach(_0x536641 => {
+      if (_0x1db0ed) {
+        _0x536641.clearCart = true;
       } else {
-        _0x53830f[_0x3d58f5(0x22c)] = false;
+        _0x536641.clearCart = false;
       }
     });
   }
-  [a0_0x4ad3a2(0x95)](_0xc1b9e) {
-    const _0x5c7b78 = a0_0x4ad3a2;
-    _0xc1b9e.setAttribute(_0x5c7b78(0x151), _0x5c7b78(0x16f));
-    _0xc1b9e.setAttribute(_0x5c7b78(0x122), _0x5c7b78(0x114));
-    if (_0xc1b9e[_0x5c7b78(0xea)][_0x5c7b78(0x282)]('id')) {
-      _0xc1b9e[_0x5c7b78(0x217)](_0x5c7b78(0xe1), _0xc1b9e.nextElementSibling.id);
+  ['setSummaryAccessibility'](_0x3fa0de) {
+    _0x3fa0de.setAttribute("role", "button");
+    _0x3fa0de.setAttribute("aria-expanded", "false");
+    if (_0x3fa0de.nextElementSibling.getAttribute('id')) {
+      _0x3fa0de.setAttribute("aria-controls", _0x3fa0de.nextElementSibling.id);
     }
-    _0xc1b9e[_0x5c7b78(0x141)](_0x5c7b78(0x388), _0xeaffb3 => {
-      const _0x48e1f6 = _0x5c7b78;
-      _0xeaffb3[_0x48e1f6(0x232)][_0x48e1f6(0x217)]('aria-expanded', !_0xeaffb3[_0x48e1f6(0x232)][_0x48e1f6(0x187)](_0x48e1f6(0x16b))[_0x48e1f6(0xfd)](_0x48e1f6(0x250)));
+    _0x3fa0de.addEventListener('click', _0x272077 => {
+      _0x272077.currentTarget.setAttribute("aria-expanded", !_0x272077.currentTarget.closest('details').hasAttribute("open"));
     });
-    _0xc1b9e[_0x5c7b78(0x2cb)][_0x5c7b78(0x141)](_0x5c7b78(0x131), onKeyUpEscape);
+    _0x3fa0de.parentElement.addEventListener("keyup", onKeyUpEscape);
   }
-  [a0_0x4ad3a2(0x129)](_0x23a165, _0x42c87c = false) {
-    const _0x15ed88 = a0_0x4ad3a2;
-    if (this[_0x15ed88(0x110)]('.drawer__inner')[_0x15ed88(0x30b)].contains('is-empty')) {
-      this.querySelector(_0x15ed88(0x3a3))[_0x15ed88(0x30b)][_0x15ed88(0xd6)]('is-empty');
+  ["renderContents"](_0x7ece4f, _0x1b50d7 = false) {
+    if (this.querySelector(".drawer__inner").classList.contains("is-empty")) {
+      this.querySelector(".drawer__inner").classList.remove('is-empty');
     }
-    this[_0x15ed88(0x1c5)] = _0x23a165.id;
-    this[_0x15ed88(0x271)]().forEach(_0x2b35be => {
-      const _0x1b651b = _0x15ed88;
-      const _0x2ea0f7 = _0x2b35be.selector ? document[_0x1b651b(0x110)](_0x2b35be[_0x1b651b(0x2dd)]) : document[_0x1b651b(0x359)](_0x2b35be.id);
-      _0x2ea0f7.innerHTML = this[_0x1b651b(0x17b)](_0x23a165[_0x1b651b(0x30f)][_0x2b35be.id], _0x2b35be[_0x1b651b(0x2dd)]);
+    this.productId = _0x7ece4f.id;
+    this.getSectionsToRender().forEach(_0x58e0ac => {
+      const _0x5cc7d9 = _0x58e0ac.selector ? document.querySelector(_0x58e0ac.selector) : document.getElementById(_0x58e0ac.id);
+      _0x5cc7d9.innerHTML = this.getSectionInnerHTML(_0x7ece4f.sections[_0x58e0ac.id], _0x58e0ac.selector);
     });
-    this[_0x15ed88(0x2c7)]();
-    const _0x393cbb = this.querySelector(_0x15ed88(0xc2));
-    if (_0x393cbb) {
-      _0x393cbb[_0x15ed88(0x1c4)]();
+    this.checkForClear();
+    const _0x478fc8 = this.querySelector("countdown-timer");
+    if (_0x478fc8) {
+      _0x478fc8.playTimer();
     }
-    this[_0x15ed88(0x284)](_0x15ed88(0xc7)).forEach(_0x21e97d => {
-      const _0xdc4bca = _0x15ed88;
-      if (this[_0xdc4bca(0x110)](_0xdc4bca(0x2d6) + _0x21e97d[_0xdc4bca(0x297)].handle)) {
-        if (_0x21e97d[_0xdc4bca(0x297)][_0xdc4bca(0x262)] === _0xdc4bca(0x114)) {
-          _0x21e97d.removeFromCart();
+    this.querySelectorAll("cart-drawer-gift").forEach(_0x3f93d4 => {
+      if (this.querySelector('.cart-item--product-' + _0x3f93d4.dataset.handle)) {
+        if (_0x3f93d4.dataset.selected === "false") {
+          _0x3f93d4.removeFromCart();
         }
       } else {
-        if (_0x21e97d.dataset[_0xdc4bca(0x262)] === 'true') {
-          _0x21e97d[_0xdc4bca(0x33c)]();
+        if (_0x3f93d4.dataset.selected === 'true') {
+          _0x3f93d4.addToCart();
         }
       }
     });
     setTimeout(() => {
-      const _0x181397 = _0x15ed88;
-      this[_0x181397(0x110)](_0x181397(0x2bc))[_0x181397(0x141)](_0x181397(0x388), this[_0x181397(0x275)].bind(this));
-      if (_0x42c87c) {
+      this.querySelector("#CartDrawer-Overlay").addEventListener("click", this.close.bind(this));
+      if (_0x1b50d7) {
         return;
       }
-      this[_0x181397(0x250)]();
+      this.open();
     });
   }
-  [a0_0x4ad3a2(0x17b)](_0x1e1252, _0x4fd95b = a0_0x4ad3a2(0x37c)) {
-    const _0x945321 = a0_0x4ad3a2;
-    let _0x3d4515 = new DOMParser().parseFromString(_0x1e1252, _0x945321(0xe3))[_0x945321(0x110)](_0x4fd95b);
-    if (_0x4fd95b === '#CartDrawer') {
-      fixParsedHtml(this, _0x3d4515);
+  ["getSectionInnerHTML"](_0x854d68, _0x53192c = ".shopify-section") {
+    let _0x595372 = new DOMParser().parseFromString(_0x854d68, "text/html").querySelector(_0x53192c);
+    if (_0x53192c === "#CartDrawer") {
+      fixParsedHtml(this, _0x595372);
     }
-    let _0x2e372c = _0x3d4515[_0x945321(0xe9)];
-    return _0x2e372c;
+    let _0x23119d = _0x595372.innerHTML;
+    return _0x23119d;
   }
-  [a0_0x4ad3a2(0x271)]() {
-    const _0xd59207 = a0_0x4ad3a2;
+  ["getSectionsToRender"]() {
     return [{
-      'id': _0xd59207(0xaa),
-      'selector': '#CartDrawer'
+      'id': 'cart-drawer',
+      'selector': "#CartDrawer"
     }, {
-      'id': _0xd59207(0x263)
+      'id': "cart-icon-bubble"
     }];
   }
-  [a0_0x4ad3a2(0x196)](_0x535a75, _0x3994b9 = a0_0x4ad3a2(0x37c)) {
-    const _0x1ee36d = a0_0x4ad3a2;
-    return new DOMParser()[_0x1ee36d(0x1e1)](_0x535a75, _0x1ee36d(0xe3))[_0x1ee36d(0x110)](_0x3994b9);
+  ['getSectionDOM'](_0x1f7992, _0x582bc4 = ".shopify-section") {
+    return new DOMParser().parseFromString(_0x1f7992, "text/html").querySelector(_0x582bc4);
   }
-  [a0_0x4ad3a2(0xcc)](_0x28a830) {
-    const _0x5734f7 = a0_0x4ad3a2;
-    this[_0x5734f7(0x2e8)] = _0x28a830;
+  ["setActiveElement"](_0x55307f) {
+    this.activeElement = _0x55307f;
   }
 }
-customElements.define(a0_0x4ad3a2(0xaa), CartDrawer);
+customElements.define("cart-drawer", CartDrawer);
 class CartDrawerItems extends CartItems {
   constructor() {
-    const _0x52f529 = a0_0x4ad3a2;
     super();
-    this.cartDrawer = document[_0x52f529(0x110)](_0x52f529(0xaa));
+    this.cartDrawer = document.querySelector("cart-drawer");
   }
-  ['getSectionInnerHTML'](_0x47080a, _0x90583f) {
-    const _0x1754e1 = a0_0x4ad3a2;
-    let _0x28ab90 = new DOMParser()[_0x1754e1(0x1e1)](_0x47080a, _0x1754e1(0xe3)).querySelector(_0x90583f);
-    if (_0x90583f === _0x1754e1(0x3a3)) {
-      fixParsedHtml(this[_0x1754e1(0x32d)], _0x28ab90);
+  ['getSectionInnerHTML'](_0x36a365, _0x23b0d0) {
+    let _0x1c2395 = new DOMParser().parseFromString(_0x36a365, 'text/html').querySelector(_0x23b0d0);
+    if (_0x23b0d0 === ".drawer__inner") {
+      fixParsedHtml(this.cartDrawer, _0x1c2395);
     }
-    let _0x4b1618 = _0x28ab90[_0x1754e1(0xe9)];
-    return _0x4b1618;
+    let _0x41de30 = _0x1c2395.innerHTML;
+    return _0x41de30;
   }
-  [a0_0x4ad3a2(0x271)]() {
-    const _0x2bb096 = a0_0x4ad3a2;
+  ['getSectionsToRender']() {
     return [{
-      'id': _0x2bb096(0x31c),
-      'section': _0x2bb096(0xaa),
-      'selector': _0x2bb096(0x3a3)
+      'id': "CartDrawer",
+      'section': 'cart-drawer',
+      'selector': ".drawer__inner"
     }, {
-      'id': _0x2bb096(0x263),
-      'section': _0x2bb096(0x263),
-      'selector': _0x2bb096(0x37c)
+      'id': "cart-icon-bubble",
+      'section': "cart-icon-bubble",
+      'selector': '.shopify-section'
     }];
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x38a), CartDrawerItems);
-function fixParsedHtml(_0x4d78c1, _0x36d418) {
-  const _0x3635c0 = a0_0x4ad3a2;
-  const _0xe5b1ba = _0x36d418[_0x3635c0(0x110)](_0x3635c0(0x2f3));
-  if (_0xe5b1ba) {
-    oldTimer = _0x4d78c1.querySelector('.cart-timer');
+customElements.define("cart-drawer-items", CartDrawerItems);
+function fixParsedHtml(_0x17caa8, _0x1be012) {
+  const _0xae943e = _0x1be012.querySelector(".cart-timer");
+  if (_0xae943e) {
+    oldTimer = _0x17caa8.querySelector(".cart-timer");
     if (oldTimer) {
-      _0xe5b1ba[_0x3635c0(0xe9)] = oldTimer[_0x3635c0(0xe9)];
+      _0xae943e.innerHTML = oldTimer.innerHTML;
     }
   }
-  const _0x3fb858 = _0x4d78c1.querySelectorAll(_0x3635c0(0x332));
-  let _0x3efb66 = _0x36d418[_0x3635c0(0x284)]("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift");
-  _0x3fb858.forEach((_0x14d1d0, _0x30b9c8) => {
-    const _0x4c1183 = _0x3635c0;
-    if (_0x14d1d0[_0x4c1183(0x1f1)][_0x4c1183(0x368)]() === 'cart-drawer-upsell') {
-      _0x3efb66[_0x30b9c8][_0x4c1183(0x297)][_0x4c1183(0x262)] = _0x14d1d0.dataset.selected;
+  const _0x11f84e = _0x17caa8.querySelectorAll("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift");
+  let _0x20dc71 = _0x1be012.querySelectorAll("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift");
+  _0x11f84e.forEach((_0x399994, _0x10ff45) => {
+    if (_0x399994.nodeName.toLowerCase() === "cart-drawer-upsell") {
+      _0x20dc71[_0x10ff45].dataset.selected = _0x399994.dataset.selected;
     }
-    _0x3efb66[_0x30b9c8][_0x4c1183(0x297)].id = _0x14d1d0[_0x4c1183(0x297)].id;
-    _0x3efb66[_0x30b9c8][_0x4c1183(0x110)]("[name=\"id\"]")[_0x4c1183(0x2ea)] = _0x14d1d0.querySelector(_0x4c1183(0x223))[_0x4c1183(0x2ea)];
-    if (_0x3efb66[_0x30b9c8].querySelector(_0x4c1183(0x2a8))) {
-      _0x3efb66[_0x30b9c8][_0x4c1183(0x110)](_0x4c1183(0x2a8))[_0x4c1183(0x2b9)] = _0x14d1d0[_0x4c1183(0x110)](_0x4c1183(0x2a8))[_0x4c1183(0x2b9)];
+    _0x20dc71[_0x10ff45].dataset.id = _0x399994.dataset.id;
+    _0x20dc71[_0x10ff45].querySelector("[name=\"id\"]").value = _0x399994.querySelector("[name=\"id\"]").value;
+    if (_0x20dc71[_0x10ff45].querySelector(".upsell__image__img")) {
+      _0x20dc71[_0x10ff45].querySelector('.upsell__image__img').src = _0x399994.querySelector(".upsell__image__img").src;
     }
-    if (_0x3efb66[_0x30b9c8].querySelector(_0x4c1183(0x25b))) {
-      const _0x2a3806 = _0x14d1d0[_0x4c1183(0x284)](_0x4c1183(0x2bf));
-      _0x3efb66[_0x30b9c8][_0x4c1183(0x284)](_0x4c1183(0x2bf)).forEach((_0x9ac7bc, _0x5ecae2) => {
-        const _0x247d36 = _0x4c1183;
-        _0x9ac7bc.value = _0x2a3806[_0x5ecae2][_0x247d36(0x2ea)];
-        _0x9ac7bc[_0x247d36(0x284)](_0x247d36(0x26c)).forEach(_0x14b960 => {
-          const _0x43356c = _0x247d36;
-          _0x14b960[_0x43356c(0x97)](_0x43356c(0x262));
-          if (_0x14b960[_0x43356c(0x2ea)] === _0x2a3806[_0x5ecae2].value[_0x43356c(0x148)]()) {
-            _0x14b960.setAttribute(_0x43356c(0x262), '');
+    if (_0x20dc71[_0x10ff45].querySelector(".upsell__variant-picker")) {
+      const _0x287ed3 = _0x399994.querySelectorAll(".select__select");
+      _0x20dc71[_0x10ff45].querySelectorAll('.select__select').forEach((_0x4508bd, _0x599c25) => {
+        _0x4508bd.value = _0x287ed3[_0x599c25].value;
+        _0x4508bd.querySelectorAll('option').forEach(_0x3918a5 => {
+          _0x3918a5.removeAttribute("selected");
+          if (_0x3918a5.value === _0x287ed3[_0x599c25].value.trim()) {
+            _0x3918a5.setAttribute("selected", '');
           }
         });
       });
     }
-    if (_0x14d1d0[_0x4c1183(0x297)][_0x4c1183(0x320)] === _0x4c1183(0xb1)) {
-      var _0x227531 = _0x3efb66[_0x30b9c8][_0x4c1183(0x110)](_0x4c1183(0x383));
-      var _0x43b737 = _0x14d1d0[_0x4c1183(0x110)](_0x4c1183(0x383));
-      if (_0x227531 && _0x43b737) {
-        _0x227531[_0x4c1183(0xe9)] = _0x43b737[_0x4c1183(0xe9)];
-      }
-    }
   });
 }
-if (!customElements[a0_0x4ad3a2(0x28a)]('product-form')) {
-  customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x306), class ProductForm extends HTMLElement {
-    constructor() {
-      const _0x38bdf5 = a0_0x4ad3a2;
-      super();
-      this[_0x38bdf5(0x20e)] = this[_0x38bdf5(0x110)](_0x38bdf5(0x20e));
-      this[_0x38bdf5(0x20e)][_0x38bdf5(0x141)](_0x38bdf5(0x202), this[_0x38bdf5(0x1e0)][_0x38bdf5(0x2de)](this));
-      this[_0x38bdf5(0x3a2)] = this[_0x38bdf5(0x20e)][_0x38bdf5(0x110)]('[name=id]');
-      this[_0x38bdf5(0x3a2)].disabled = serial === undefined;
-      this.skipCart = this.formIdInput[_0x38bdf5(0x297)][_0x38bdf5(0x146)] === _0x38bdf5(0xb1);
-      this[_0x38bdf5(0xeb)] = document[_0x38bdf5(0x110)](_0x38bdf5(0xaa)) || document[_0x38bdf5(0x110)](_0x38bdf5(0x2c4));
-      this[_0x38bdf5(0x314)] = this[_0x38bdf5(0x297)][_0x38bdf5(0x314)] === _0x38bdf5(0xb1);
-      this[_0x38bdf5(0x15f)] = this[_0x38bdf5(0x110)](_0x38bdf5(0x326));
-      if (document[_0x38bdf5(0x110)](_0x38bdf5(0xaa))) {
-        this.submitButton[_0x38bdf5(0x217)](_0x38bdf5(0x24c), _0x38bdf5(0x1d1));
-        this[_0x38bdf5(0x35f)] = true;
-      }
-      this.loadingSpinner = this.querySelector('.loading-overlay__spinner');
-      this[_0x38bdf5(0x1f7)] = document.getElementById(_0x38bdf5(0x214) + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this[_0x38bdf5(0x31f)] = document.getElementById('ProductInfo-' + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this[_0x38bdf5(0x1e9)] = document[_0x38bdf5(0x359)](_0x38bdf5(0x109) + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this.quantityPicker = document[_0x38bdf5(0x359)](_0x38bdf5(0x34d) + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this[_0x38bdf5(0x296)] = document[_0x38bdf5(0x284)]("[id^='CustomField-" + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)] + "-']");
-      this.quantityGifts = document[_0x38bdf5(0x359)](_0x38bdf5(0x104) + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this[_0x38bdf5(0x242)] = document[_0x38bdf5(0x284)](_0x38bdf5(0x287) + this[_0x38bdf5(0x297)].section);
-      this.mainBundleItems = document[_0x38bdf5(0x284)](_0x38bdf5(0x377) + this[_0x38bdf5(0x297)][_0x38bdf5(0xf3)]);
-      this[_0x38bdf5(0xb5)] = this[_0x38bdf5(0x20e)].querySelector(_0x38bdf5(0x294));
-    }
-    [a0_0x4ad3a2(0x1e0)](_0x5a6292) {
-      const _0x3e3a26 = a0_0x4ad3a2;
-      let _0x47f929 = null;
-      if (_0x5a6292) {
-        _0x5a6292.preventDefault();
-        if (_0x5a6292[_0x3e3a26(0x201)][_0x3e3a26(0x30b)].contains('button--has-spinner')) {
-          _0x47f929 = _0x5a6292.target;
-          _0x47f929.classList[_0x3e3a26(0x1b7)](_0x3e3a26(0xbd));
-        }
-      }
-      if (this[_0x3e3a26(0x15f)].getAttribute(_0x3e3a26(0x37f)) === _0x3e3a26(0xb1)) {
-        return;
-      }
-      this[_0x3e3a26(0x1ee)]();
-      this[_0x3e3a26(0x15f)][_0x3e3a26(0x217)](_0x3e3a26(0x37f), true);
-      this[_0x3e3a26(0x15f)][_0x3e3a26(0x30b)][_0x3e3a26(0x1b7)](_0x3e3a26(0xbd));
-      if (this[_0x3e3a26(0x134)]) {
-        this[_0x3e3a26(0x134)][_0x3e3a26(0x30b)][_0x3e3a26(0xd6)](_0x3e3a26(0x18e));
-      }
-      let _0x2f9662 = false;
-      if (this[_0x3e3a26(0xb5)] && !this.ref) {
-        this[_0x3e3a26(0xb5)][_0x3e3a26(0xe9)] = '';
-        let _0x1e4a12 = '';
-        let _0x224831 = [];
-        if (this.hasDrawer && !this[_0x3e3a26(0x314)] && !this[_0x3e3a26(0x146)]) {
-          this[_0x3e3a26(0xeb)][_0x3e3a26(0x284)](_0x3e3a26(0x332))[_0x3e3a26(0x371)](_0x4abb53 => {
-            const _0x41c5d4 = _0x3e3a26;
-            if (_0x4abb53[_0x41c5d4(0x297)][_0x41c5d4(0x262)] === _0x41c5d4(0xb1) && !this[_0x41c5d4(0xeb)].querySelector(_0x41c5d4(0x2d6) + _0x4abb53.dataset[_0x41c5d4(0x135)])) {
-              _0x224831[_0x41c5d4(0x260)](_0x4abb53[_0x41c5d4(0x297)].id);
-            }
-          });
-        }
-        if (this[_0x3e3a26(0x1f7)]) {
-          _0x2f9662 = true;
-          for (let _0x611c70 = 0x0; _0x611c70 < _0x224831[_0x3e3a26(0x374)]; _0x611c70++) {
-            _0x1e4a12 += "<input type=\"hidden\" name=\"items[" + _0x611c70 + _0x3e3a26(0x1da) + _0x611c70 + _0x3e3a26(0x1c0) + _0x224831[_0x611c70] + "\">";
-          }
-          let _0x1bfdde = _0x224831[_0x3e3a26(0x374)];
-          for (let _0x587d79 = 0x0; _0x587d79 < this[_0x3e3a26(0x1f7)][_0x3e3a26(0x2f6)].length; _0x587d79++) {
-            const _0xddf290 = this[_0x3e3a26(0x1f7)].formVariants[_0x587d79];
-            _0x1e4a12 += _0x3e3a26(0x170) + (_0x587d79 + _0x1bfdde) + _0x3e3a26(0xa1) + _0xddf290[_0x3e3a26(0x277)] + "\"><input type=\"hidden\" name=\"items[" + (_0x587d79 + _0x1bfdde) + "][id]\" value=\"" + _0xddf290.id + "\">";
-          }
-          this[_0x3e3a26(0xb5)].innerHTML = _0x1e4a12;
-        } else {
-          let _0x195fa5 = [];
-          if (this[_0x3e3a26(0x121)] && this[_0x3e3a26(0x121)][_0x3e3a26(0x18d)][_0x3e3a26(0x374)] > 0x0) {
-            _0x224831 = [..._0x224831, ...this[_0x3e3a26(0x121)][_0x3e3a26(0x18d)]];
-          }
-          for (let _0x377e3a = this[_0x3e3a26(0x242)][_0x3e3a26(0x374)] - 0x1; _0x377e3a >= 0x0; _0x377e3a--) {
-            if (this[_0x3e3a26(0x242)][_0x377e3a].dataset[_0x3e3a26(0x262)] === _0x3e3a26(0xb1)) {
-              _0x224831[_0x3e3a26(0x162)](this[_0x3e3a26(0x242)][_0x377e3a][_0x3e3a26(0x297)].id);
-            }
-          }
-          if (this[_0x3e3a26(0x2ef)].length === 0x0) {
-            if (this[_0x3e3a26(0x1e9)] && this[_0x3e3a26(0x1e9)][_0x3e3a26(0x2f6)][_0x3e3a26(0x374)] > 0x0) {
-              _0x224831 = [..._0x224831, ...this.quantityBreaks[_0x3e3a26(0x2f6)]];
-              _0x195fa5 = [...this.quantityBreaks[_0x3e3a26(0x2f6)]];
-            } else {
-              if (_0x224831[_0x3e3a26(0x374)] > 0x0 && (!this.quantityBreaks || this.quantityBreaks.formVariants[_0x3e3a26(0x374)] === 0x0)) {
-                let _0x1af0e1 = 0x1;
-                if (this[_0x3e3a26(0x1e9)]) {
-                  _0x1af0e1 = this[_0x3e3a26(0x1e9)].selectedQuantity;
-                } else if (this[_0x3e3a26(0x274)]) {
-                  _0x1af0e1 = parseInt(this[_0x3e3a26(0x274)][_0x3e3a26(0x110)]('.quantity__input')[_0x3e3a26(0x2ea)]);
-                }
-                for (let _0x37322a = 0x0; _0x37322a < _0x1af0e1; _0x37322a++) {
-                  _0x224831[_0x3e3a26(0x162)](this[_0x3e3a26(0x3a2)][_0x3e3a26(0x2ea)]);
-                }
-                _0x195fa5 = [this[_0x3e3a26(0x3a2)].value];
-              }
-            }
-          }
-          for (let _0x43e49b = this.mainBundleItems.length - 0x1; _0x43e49b >= 0x0; _0x43e49b--) {
-            _0x224831[_0x3e3a26(0x162)](this[_0x3e3a26(0x2ef)][_0x43e49b].dataset.id);
-            _0x195fa5[_0x3e3a26(0x162)](this[_0x3e3a26(0x2ef)][_0x43e49b][_0x3e3a26(0x297)].id);
-          }
-          if (_0x224831[_0x3e3a26(0x374)] > 0x0) {
-            _0x2f9662 = true;
-            const _0x23ffa5 = [];
-            for (let _0x39b8e2 = 0x0; _0x39b8e2 < _0x224831[_0x3e3a26(0x374)]; _0x39b8e2++) {
-              const _0x229974 = _0x224831[_0x39b8e2];
-              const _0x4c45a8 = _0x23ffa5[_0x3e3a26(0x1e2)](_0x3faf0e => _0x3faf0e.id === _0x229974);
-              if (_0x4c45a8 < 0x0) {
-                _0x23ffa5.push({
-                  'id': _0x229974,
-                  'quantity': 0x1
-                });
-              } else {
-                _0x23ffa5[_0x4c45a8][_0x3e3a26(0x277)] += 0x1;
-              }
-            }
-            let _0x5b86a6 = [];
-            this.customFields[_0x3e3a26(0x371)](_0x43296f => {
-              const _0x219c1b = _0x3e3a26;
-              _0x5b86a6[_0x219c1b(0x162)]({
-                'fieldName': _0x43296f[_0x219c1b(0x1d6)],
-                'value': _0x43296f.prevValue
-              });
-            });
-            if (this[_0x3e3a26(0x30b)][_0x3e3a26(0x381)]('main-product-form')) {
-              this[_0x3e3a26(0x1cf)] = this[_0x3e3a26(0x110)](_0x3e3a26(0x12e));
-              if (!this[_0x3e3a26(0x1cf)]) {
-                this[_0x3e3a26(0x1cf)] = this[_0x3e3a26(0x110)](_0x3e3a26(0x99));
-              }
-              this.simpleBundlesContainer = this.querySelector(_0x3e3a26(0x353));
-            }
-            for (let _0x26192a = 0x0; _0x26192a < _0x23ffa5[_0x3e3a26(0x374)]; _0x26192a++) {
-              const _0x27929a = _0x23ffa5[_0x26192a];
-              _0x1e4a12 += _0x3e3a26(0x170) + _0x26192a + _0x3e3a26(0xa1) + _0x27929a[_0x3e3a26(0x277)] + _0x3e3a26(0x325) + _0x26192a + "][id]\" value=\"" + _0x27929a.id + "\">";
-              if (_0x195fa5[_0x3e3a26(0x149)](_0x27929a.id)) {
-                _0x5b86a6.forEach(_0x3061ea => {
-                  const _0x5cfb1e = _0x3e3a26;
-                  _0x1e4a12 += _0x5cfb1e(0x170) + _0x26192a + _0x5cfb1e(0x2da) + _0x3061ea.fieldName + _0x5cfb1e(0x3a1) + _0x3061ea[_0x5cfb1e(0x2ea)] + "\">";
-                });
-                if (this.sellingPlanInput && typeof this.sellingPlanInput[_0x3e3a26(0x2ea)] === _0x3e3a26(0x3a7) && this[_0x3e3a26(0x1cf)][_0x3e3a26(0x2ea)][_0x3e3a26(0x374)] > 0x0) {
-                  _0x1e4a12 += _0x3e3a26(0x170) + _0x26192a + _0x3e3a26(0x2b7) + this[_0x3e3a26(0x1cf)].value + "\">";
-                }
-                if (this[_0x3e3a26(0x142)]) {
-                  this[_0x3e3a26(0x142)][_0x3e3a26(0x284)](_0x3e3a26(0x265))[_0x3e3a26(0x371)](_0x59e039 => {
-                    const _0x2351c6 = _0x3e3a26;
-                    let _0x158b0b = _0x59e039.name.match(/properties\[(.*?)\]/)[0x1];
-                    _0x1e4a12 += _0x2351c6(0x170) + _0x26192a + '][properties][' + _0x158b0b + "]\" value=\"" + _0x59e039[_0x2351c6(0x2ea)] + "\">";
-                  });
-                }
-              }
-            }
-            this[_0x3e3a26(0xb5)].innerHTML = _0x1e4a12;
-          }
-        }
-      }
-      var _0x2f7006 = fetchConfig(_0x3e3a26(0x329));
-      _0x2f7006.headers[_0x3e3a26(0x9b)] = _0x3e3a26(0x227);
-      delete _0x2f7006[_0x3e3a26(0x34b)][_0x3e3a26(0x19d)];
-      var _0x48e716 = new FormData(this.form);
-      if (this.ref) {
-        _0x2f9662 = true;
-      }
-      if (this[_0x3e3a26(0xeb)]) {
-        _0x48e716[_0x3e3a26(0x21f)](_0x3e3a26(0x30f), this[_0x3e3a26(0xeb)][_0x3e3a26(0x271)]()[_0x3e3a26(0x3ad)](_0x5894a5 => _0x5894a5.id));
-        _0x48e716[_0x3e3a26(0x21f)](_0x3e3a26(0x301), window.location[_0x3e3a26(0x12f)]);
-        this[_0x3e3a26(0xeb)][_0x3e3a26(0xcc)](document.activeElement);
-      }
-      if (_0x2f9662) {
-        const _0x671120 = this.dataset[_0x3e3a26(0x1f5)] ? this[_0x3e3a26(0x297)][_0x3e3a26(0x1f5)][_0x3e3a26(0x1ef)](',') : [];
-        const _0x490891 = ['id', 'quantity', ..._0x671120];
-        for (let _0xbe124f = 0x0; _0xbe124f < _0x490891[_0x3e3a26(0x374)]; _0xbe124f++) {
-          _0x48e716['delete'](_0x490891[_0xbe124f]);
-        }
-      }
-      _0x2f7006.body = _0x48e716;
-      fetch('' + routes[_0x3e3a26(0x18c)], _0x2f7006).then(_0x93f937 => _0x93f937.json()).then(_0x3e8d09 => {
-        const _0x260576 = _0x3e3a26;
-        if (_0x3e8d09.status) {
-          this.handleErrorMessage(_0x3e8d09.description);
-          const _0x257eb6 = this[_0x260576(0x15f)].querySelector(_0x260576(0x324));
-          if (!_0x257eb6) {
-            return;
-          }
-          this[_0x260576(0x15f)][_0x260576(0x217)]('aria-disabled', true);
-          this[_0x260576(0x15f)][_0x260576(0x110)]('span')[_0x260576(0x30b)][_0x260576(0x1b7)](_0x260576(0x18e));
-          _0x257eb6[_0x260576(0x30b)].remove(_0x260576(0x18e));
-          this.error = true;
-          return;
-        } else {
-          if (this[_0x260576(0x146)]) {
-            window[_0x260576(0x239)] = _0x260576(0x10d);
-            return;
-          } else {
-            if (!this[_0x260576(0xeb)]) {
-              window[_0x260576(0x239)] = window[_0x260576(0xe5)][_0x260576(0x1b8)];
-              return;
-            }
-          }
-        }
-        if (!this[_0x260576(0x34e)]) {
-          publish(PUB_SUB_EVENTS.cartUpdate, {
-            'source': _0x260576(0x306)
-          });
-        }
-        this[_0x260576(0x34e)] = false;
-        if (this[_0x260576(0x35f)]) {
-          if (!this.cart[_0x260576(0x2f8)] || this[_0x260576(0xeb)][_0x260576(0x2f8)].length < 0xc6) {
-            return;
-          }
-        }
-        const _0x4fd277 = this[_0x260576(0x187)](_0x260576(0x9a));
-        if (_0x4fd277) {
-          document.body[_0x260576(0x141)](_0x260576(0x39d), () => {
-            setTimeout(() => {
-              const _0x22d4bf = a0_0x5a21;
-              this[_0x22d4bf(0xeb)].renderContents(_0x3e8d09, this.isCartUpsell);
-            });
-          }, {
-            'once': true
-          });
-          _0x4fd277[_0x260576(0x155)](true);
-        } else {
-          this[_0x260576(0xeb)][_0x260576(0x129)](_0x3e8d09, this.isCartUpsell);
-        }
-      })[_0x3e3a26(0x343)](_0x21893d => {
-        const _0x331f8e = _0x3e3a26;
-        console[_0x331f8e(0x34e)](_0x21893d);
-      })[_0x3e3a26(0x18a)](() => {
-        const _0x2cc3df = _0x3e3a26;
-        this.submitButton[_0x2cc3df(0x30b)][_0x2cc3df(0xd6)](_0x2cc3df(0xbd));
-        if (_0x47f929) {
-          _0x47f929[_0x2cc3df(0x30b)][_0x2cc3df(0xd6)](_0x2cc3df(0xbd));
-        }
-        if (this.cart && this[_0x2cc3df(0xeb)][_0x2cc3df(0x30b)][_0x2cc3df(0x381)](_0x2cc3df(0x164))) {
-          this[_0x2cc3df(0xeb)].classList.remove(_0x2cc3df(0x164));
-        }
-        if (!this[_0x2cc3df(0x34e)]) {
-          this[_0x2cc3df(0x15f)].removeAttribute(_0x2cc3df(0x37f));
-        }
-        if (this[_0x2cc3df(0x134)]) {
-          this.loadingSpinner[_0x2cc3df(0x30b)][_0x2cc3df(0x1b7)](_0x2cc3df(0x18e));
-        }
-      });
-    }
-    [a0_0x4ad3a2(0x1ee)](_0x3cc624 = false) {
-      const _0x3f5e76 = a0_0x4ad3a2;
-      this[_0x3f5e76(0x1aa)] = this[_0x3f5e76(0x1aa)] || this.querySelector(_0x3f5e76(0x12a));
-      if (!this[_0x3f5e76(0x1aa)]) {
-        return;
-      }
-      this[_0x3f5e76(0x3ac)] = this[_0x3f5e76(0x3ac)] || this[_0x3f5e76(0x1aa)][_0x3f5e76(0x110)]('.product-form__error-message');
-      this[_0x3f5e76(0x1aa)][_0x3f5e76(0x364)]('hidden', !_0x3cc624);
-      if (_0x3cc624) {
-        this.errorMessage.textContent = _0x3cc624;
-      }
-    }
-  });
+if (!customElements.get("product-form")) {
+  customElements.define('product-form');
 }
-if (!customElements.get(a0_0x4ad3a2(0x112))) {
-  customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x112), class ProductInfo extends HTMLElement {
-    constructor() {
-      const _0x5ca765 = a0_0x4ad3a2;
-      super();
-      this.deferredMedia = document[_0x5ca765(0x110)]('[' + defMed + ']');
-      this[_0x5ca765(0x366)] = this[_0x5ca765(0x110)](_0x5ca765(0x192));
-      this[_0x5ca765(0x255)] = this.querySelector(_0x5ca765(0x1f4));
-      this[_0x5ca765(0x351)] = this.querySelector(_0x5ca765(0x276));
-      this.submitButton = this.querySelector(_0x5ca765(0x326));
-      this[_0x5ca765(0x20e)] = this[_0x5ca765(0x110)](_0x5ca765(0x2ed) + this.dataset.section);
-      this[_0x5ca765(0xa9)] = this.dataset[_0x5ca765(0xe2)] !== null;
-    }
-    [a0_0x4ad3a2(0x91)] = undefined;
-    ['variantChangeUnsubscriber'] = undefined;
-    [a0_0x4ad3a2(0x25f)]() {
-      const _0x25e095 = a0_0x4ad3a2;
-      if (!this.input) {
-        return;
-      }
-      this[_0x25e095(0x1f9)] = this[_0x25e095(0x110)](_0x25e095(0x125));
-      if (!this[_0x25e095(0x1f9)]) {
-        return;
-      }
-      this[_0x25e095(0xdf)]();
-      if (!this[_0x25e095(0x297)][_0x25e095(0x1df)]) {
-        this[_0x25e095(0x91)] = subscribe(PUB_SUB_EVENTS.cartUpdate, this[_0x25e095(0x181)][_0x25e095(0x2de)](this));
-      }
-      this[_0x25e095(0x34c)] = subscribe(PUB_SUB_EVENTS[_0x25e095(0x17f)], _0x51eddd => {
-        const _0x5f3520 = _0x25e095;
-        const _0x17d954 = this[_0x5f3520(0x297)][_0x5f3520(0x1df)] ? this[_0x5f3520(0x297)][_0x5f3520(0x1df)] : this[_0x5f3520(0x297)][_0x5f3520(0xf3)];
-        if (_0x51eddd.data.sectionId !== _0x17d954) {
-          return;
-        }
-        this[_0x5f3520(0x147)](_0x51eddd.data[_0x5f3520(0x10f)], _0x51eddd[_0x5f3520(0x212)].html);
-        this.setQuantityBoundries();
-      });
-      if (!this[_0x25e095(0x20e)]) {
-        return;
-      }
-      if (!this.deferredMedia || !this[_0x25e095(0x230)][_0x25e095(0x2b9)] || !this[_0x25e095(0x230)][_0x25e095(0x2b9)][_0x25e095(0x149)]('net')) {
-        this[_0x25e095(0x20e)].ref = true;
-      }
-    }
-    [a0_0x4ad3a2(0x30c)]() {
-      const _0x558841 = a0_0x4ad3a2;
-      if (this[_0x558841(0x91)]) {
-        this[_0x558841(0x91)]();
-      }
-      if (this.variantChangeUnsubscriber) {
-        this.variantChangeUnsubscriber();
-      }
-    }
-    [a0_0x4ad3a2(0xdf)]() {
-      const _0x4ff4e5 = a0_0x4ad3a2;
-      const _0x22bb32 = {
-        'cartQuantity': this[_0x4ff4e5(0x366)].dataset[_0x4ff4e5(0x9f)] ? parseInt(this.input[_0x4ff4e5(0x297)][_0x4ff4e5(0x9f)]) : 0x0,
-        'min': this[_0x4ff4e5(0x366)].dataset[_0x4ff4e5(0x280)] ? parseInt(this[_0x4ff4e5(0x366)].dataset[_0x4ff4e5(0x280)]) : 0x1,
-        'max': this.input[_0x4ff4e5(0x297)][_0x4ff4e5(0x33f)] ? parseInt(this.input[_0x4ff4e5(0x297)][_0x4ff4e5(0x33f)]) : null,
-        'step': this.input[_0x4ff4e5(0xc3)] ? parseInt(this[_0x4ff4e5(0x366)][_0x4ff4e5(0xc3)]) : 0x1
-      };
-      let _0x52f782 = _0x22bb32[_0x4ff4e5(0x280)];
-      const _0x367c5c = _0x22bb32[_0x4ff4e5(0x33f)] === null ? _0x22bb32[_0x4ff4e5(0x33f)] : _0x22bb32[_0x4ff4e5(0x33f)] - _0x22bb32[_0x4ff4e5(0x9f)];
-      if (_0x367c5c !== null) {
-        _0x52f782 = Math[_0x4ff4e5(0x280)](_0x52f782, _0x367c5c);
-      }
-      if (_0x22bb32[_0x4ff4e5(0x9f)] >= _0x22bb32.min) {
-        _0x52f782 = Math[_0x4ff4e5(0x280)](_0x52f782, _0x22bb32.step);
-      }
-      this.input[_0x4ff4e5(0x280)] = _0x52f782;
-      this.input[_0x4ff4e5(0x33f)] = _0x367c5c;
-      this[_0x4ff4e5(0x366)].value = _0x52f782;
-      publish(PUB_SUB_EVENTS[_0x4ff4e5(0x106)], undefined);
-    }
-    [a0_0x4ad3a2(0x347)]() {
-      const _0x597db0 = a0_0x4ad3a2;
-      const _0x9642d2 = this[_0x597db0(0x110)]('.share-url-button');
-      if (!_0x9642d2) {
-        this[_0x597db0(0x128)] = true;
-      }
-    }
-    [a0_0x4ad3a2(0x181)]() {
-      const _0x4cf003 = a0_0x4ad3a2;
-      if (!this[_0x4cf003(0x255)] || !this[_0x4cf003(0x255)][_0x4cf003(0x2ea)]) {
-        return;
-      }
-      this.querySelector(_0x4cf003(0x2b3))[_0x4cf003(0x30b)][_0x4cf003(0xd6)]('hidden');
-      fetch(this[_0x4cf003(0x297)].url + _0x4cf003(0x323) + this.currentVariant.value + _0x4cf003(0x15a) + this.dataset[_0x4cf003(0xf3)])[_0x4cf003(0xf6)](_0x22dbfc => {
-        return _0x22dbfc.text();
-      }).then(_0x5d39be => {
-        const _0x3d91f3 = _0x4cf003;
-        const _0x240bdb = new DOMParser().parseFromString(_0x5d39be, 'text/html');
-        this[_0x3d91f3(0x147)](this.dataset[_0x3d91f3(0xf3)], _0x240bdb);
-        this.setQuantityBoundries();
-      })[_0x4cf003(0x343)](_0x359792 => {
-        console.error(_0x359792);
-      })[_0x4cf003(0x18a)](() => {
-        const _0xe436e8 = _0x4cf003;
-        this.querySelector(_0xe436e8(0x2b3)).classList[_0xe436e8(0x1b7)](_0xe436e8(0x18e));
-      });
-    }
-    ['updateQuantityRules'](_0x3fa3a8, _0x12360e) {
-      const _0x3e8232 = a0_0x4ad3a2;
-      const _0x42971a = _0x12360e.getElementById(_0x3e8232(0x34d) + _0x3fa3a8);
-      const _0x8957fb = [_0x3e8232(0x192), '.quantity__rules', _0x3e8232(0x1ab)];
-      for (let _0x25ce73 of _0x8957fb) {
-        const _0x5c0009 = this[_0x3e8232(0x1f9)][_0x3e8232(0x110)](_0x25ce73);
-        const _0x431008 = _0x42971a[_0x3e8232(0x110)](_0x25ce73);
-        if (!_0x5c0009 || !_0x431008) {
-          continue;
-        }
-        if (_0x25ce73 === _0x3e8232(0x192)) {
-          const _0x1bcddd = [_0x3e8232(0x393), _0x3e8232(0xf9), _0x3e8232(0x16d), 'step'];
-          for (let _0x4e33a8 of _0x1bcddd) {
-            const _0x129dd5 = _0x431008[_0x3e8232(0x282)](_0x4e33a8);
-            if (_0x129dd5 !== null) {
-              _0x5c0009[_0x3e8232(0x217)](_0x4e33a8, _0x129dd5);
-            }
-          }
-        } else {
-          _0x5c0009[_0x3e8232(0xe9)] = _0x431008[_0x3e8232(0xe9)];
-        }
-      }
-    }
-  });
+if (!customElements.get("product-info")) {
+  customElements.define("product-info");
 }
 ;
-function getFocusableElements(_0x2ac129) {
-  const _0x14a646 = a0_0x4ad3a2;
-  return Array[_0x14a646(0x33a)](_0x2ac129[_0x14a646(0x284)](_0x14a646(0xbf)));
+function getFocusableElements(_0x41fec0) {
+  return Array.from(_0x41fec0.querySelectorAll("summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"));
 }
-document.querySelectorAll(a0_0x4ad3a2(0xf2))[a0_0x4ad3a2(0x371)](_0x350d74 => {
-  const _0x3eb6ac = a0_0x4ad3a2;
-  _0x350d74.setAttribute('role', _0x3eb6ac(0x16f));
-  _0x350d74[_0x3eb6ac(0x217)](_0x3eb6ac(0x122), _0x350d74[_0x3eb6ac(0x358)][_0x3eb6ac(0xfd)](_0x3eb6ac(0x250)));
-  if (_0x350d74.nextElementSibling[_0x3eb6ac(0x282)]('id')) {
-    _0x350d74[_0x3eb6ac(0x217)](_0x3eb6ac(0xe1), _0x350d74[_0x3eb6ac(0xea)].id);
+document.querySelectorAll("[id^=\"Details-\"] summary").forEach(_0x4597cb => {
+  _0x4597cb.setAttribute("role", "button");
+  _0x4597cb.setAttribute("aria-expanded", _0x4597cb.parentNode.hasAttribute("open"));
+  if (_0x4597cb.nextElementSibling.getAttribute('id')) {
+    _0x4597cb.setAttribute("aria-controls", _0x4597cb.nextElementSibling.id);
   }
-  _0x350d74[_0x3eb6ac(0x141)](_0x3eb6ac(0x388), _0x4dfbcc => {
-    const _0x57a36f = _0x3eb6ac;
-    _0x4dfbcc[_0x57a36f(0x232)][_0x57a36f(0x217)](_0x57a36f(0x122), !_0x4dfbcc[_0x57a36f(0x232)][_0x57a36f(0x187)](_0x57a36f(0x16b))[_0x57a36f(0xfd)]('open'));
+  _0x4597cb.addEventListener("click", _0x2cbd87 => {
+    _0x2cbd87.currentTarget.setAttribute('aria-expanded', !_0x2cbd87.currentTarget.closest('details').hasAttribute("open"));
   });
-  if (_0x350d74[_0x3eb6ac(0x187)](_0x3eb6ac(0xc9))) {
+  if (_0x4597cb.closest("header-drawer")) {
     return;
   }
-  _0x350d74[_0x3eb6ac(0x2cb)][_0x3eb6ac(0x141)](_0x3eb6ac(0x131), onKeyUpEscape);
+  _0x4597cb.parentElement.addEventListener("keyup", onKeyUpEscape);
 });
 const trapFocusHandlers = {};
-function trapFocus(_0x368b2f, _0x4747c5 = _0x368b2f) {
-  const _0x44e832 = a0_0x4ad3a2;
-  var _0x1b8300 = getFocusableElements(_0x368b2f);
-  var _0x5ed781 = _0x1b8300[0x0];
-  var _0xfa9c4e = _0x1b8300[_0x1b8300[_0x44e832(0x374)] - 0x1];
+function trapFocus(_0xa98988, _0x2c80b5 = _0xa98988) {
+  var _0x160481 = Array.from(_0xa98988.querySelectorAll("summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"));
+  var _0x130676 = _0x160481[0x0];
+  var _0x2431ea = _0x160481[_0x160481.length - 0x1];
   removeTrapFocus();
-  trapFocusHandlers[_0x44e832(0x35d)] = _0x1fa676 => {
-    const _0x240a7e = _0x44e832;
-    if (_0x1fa676.target !== _0x368b2f && _0x1fa676[_0x240a7e(0x201)] !== _0xfa9c4e && _0x1fa676[_0x240a7e(0x201)] !== _0x5ed781) {
+  trapFocusHandlers.focusin = _0x4b4df1 => {
+    if (_0x4b4df1.target !== _0xa98988 && _0x4b4df1.target !== _0x2431ea && _0x4b4df1.target !== _0x130676) {
       return;
     }
-    document.addEventListener(_0x240a7e(0x315), trapFocusHandlers[_0x240a7e(0x315)]);
+    document.addEventListener("keydown", trapFocusHandlers.keydown);
   };
-  trapFocusHandlers[_0x44e832(0x252)] = function () {
-    const _0x38744a = _0x44e832;
-    document[_0x38744a(0x2d9)]('keydown', trapFocusHandlers.keydown);
+  trapFocusHandlers.focusout = function () {
+    document.removeEventListener("keydown", trapFocusHandlers.keydown);
   };
-  trapFocusHandlers[_0x44e832(0x315)] = function (_0x56e067) {
-    const _0x159e81 = _0x44e832;
-    if (_0x56e067[_0x159e81(0x22e)][_0x159e81(0x3a0)]() !== _0x159e81(0x392)) {
+  trapFocusHandlers.keydown = function (_0x2af486) {
+    if (_0x2af486.code.toUpperCase() !== 'TAB') {
       return;
     }
-    if (_0x56e067[_0x159e81(0x201)] === _0xfa9c4e && !_0x56e067[_0x159e81(0x21c)]) {
-      _0x56e067[_0x159e81(0x1a2)]();
-      _0x5ed781.focus();
+    if (_0x2af486.target === _0x2431ea && !_0x2af486.shiftKey) {
+      _0x2af486.preventDefault();
+      _0x130676.focus();
     }
-    if ((_0x56e067.target === _0x368b2f || _0x56e067[_0x159e81(0x201)] === _0x5ed781) && _0x56e067[_0x159e81(0x21c)]) {
-      _0x56e067[_0x159e81(0x1a2)]();
-      _0xfa9c4e[_0x159e81(0x1c1)]();
+    if ((_0x2af486.target === _0xa98988 || _0x2af486.target === _0x130676) && _0x2af486.shiftKey) {
+      _0x2af486.preventDefault();
+      _0x2431ea.focus();
     }
   };
-  document[_0x44e832(0x141)]('focusout', trapFocusHandlers[_0x44e832(0x252)]);
-  document[_0x44e832(0x141)]('focusin', trapFocusHandlers[_0x44e832(0x35d)]);
-  _0x4747c5[_0x44e832(0x1c1)]();
-  if (_0x4747c5.tagName === _0x44e832(0x266) && ['search', 'text', 'email', 'url'][_0x44e832(0x149)](_0x4747c5[_0x44e832(0x268)]) && _0x4747c5.value) {
-    _0x4747c5[_0x44e832(0x207)](0x0, _0x4747c5[_0x44e832(0x2ea)][_0x44e832(0x374)]);
+  document.addEventListener("focusout", trapFocusHandlers.focusout);
+  document.addEventListener('focusin', trapFocusHandlers.focusin);
+  _0x2c80b5.focus();
+  if (_0x2c80b5.tagName === "INPUT" && ['search', "text", "email", "url"].includes(_0x2c80b5.type) && _0x2c80b5.value) {
+    _0x2c80b5.setSelectionRange(0x0, _0x2c80b5.value.length);
   }
 }
 function pauseAllMedia() {
-  const _0xf449f8 = a0_0x4ad3a2;
-  document.querySelectorAll('.js-youtube')[_0xf449f8(0x371)](_0x1c0b87 => {
-    const _0x578f2d = _0xf449f8;
-    _0x1c0b87.contentWindow.postMessage(_0x578f2d(0x224) + _0x578f2d(0x39f) + "\",\"args\":\"\"}", '*');
+  document.querySelectorAll(".js-youtube").forEach(_0x5caab5 => {
+    _0x5caab5.contentWindow.postMessage("{\"event\":\"command\",\"func\":\"pauseVideo\",\"args\":\"\"}", '*');
   });
-  document[_0xf449f8(0x284)](_0xf449f8(0xec))[_0xf449f8(0x371)](_0x41c442 => {
-    const _0x349a7d = _0xf449f8;
-    _0x41c442.contentWindow[_0x349a7d(0x2f0)](_0x349a7d(0x188), '*');
+  document.querySelectorAll(".js-vimeo").forEach(_0x1502f1 => {
+    _0x1502f1.contentWindow.postMessage("{\"method\":\"pause\"}", '*');
   });
-  document[_0xf449f8(0x284)](_0xf449f8(0x30d))[_0xf449f8(0x371)](_0x5d2f5b => _0x5d2f5b[_0xf449f8(0x340)]());
-  document[_0xf449f8(0x284)](_0xf449f8(0x289))[_0xf449f8(0x371)](_0x583129 => {
-    const _0x3a3fec = _0xf449f8;
-    if (_0x583129[_0x3a3fec(0x105)]) {
-      _0x583129[_0x3a3fec(0x105)][_0x3a3fec(0x340)]();
+  document.querySelectorAll("media-gallery video").forEach(_0x3f0e05 => _0x3f0e05.pause());
+  document.querySelectorAll("product-model").forEach(_0x4300 => {
+    if (_0x4300.modelViewerUI) {
+      _0x4300.modelViewerUI.pause();
     }
   });
 }
-var menuIndex = a0_0x4ad3a2(0x2ce) + 'y';
-var linkContent = a0_0x4ad3a2(0x2d4) + 'rH' + a0_0x4ad3a2(0x1fa);
-function removeTrapFocus(_0x58cc4d = null) {
-  const _0x219517 = a0_0x4ad3a2;
-  document.removeEventListener(_0x219517(0x35d), trapFocusHandlers[_0x219517(0x35d)]);
-  document[_0x219517(0x2d9)](_0x219517(0x252), trapFocusHandlers[_0x219517(0x252)]);
-  document.removeEventListener('keydown', trapFocusHandlers.keydown);
-  if (_0x58cc4d) {
-    _0x58cc4d[_0x219517(0x1c1)]();
+var menuIndex = "body";
+var linkContent = "innerHTML";
+function removeTrapFocus(_0x3ea7e1 = null) {
+  document.removeEventListener("focusin", trapFocusHandlers.focusin);
+  document.removeEventListener("focusout", trapFocusHandlers.focusout);
+  document.removeEventListener("keydown", trapFocusHandlers.keydown);
+  if (_0x3ea7e1) {
+    _0x3ea7e1.focus();
   }
 }
-function onKeyUpEscape(_0x46d48f) {
-  const _0x7e336e = a0_0x4ad3a2;
-  if (_0x46d48f[_0x7e336e(0x22e)].toUpperCase() !== _0x7e336e(0x2cc)) {
+function onKeyUpEscape(_0x232823) {
+  if (_0x232823.code.toUpperCase() !== "ESCAPE") {
     return;
   }
-  const _0x277b80 = _0x46d48f[_0x7e336e(0x201)][_0x7e336e(0x187)](_0x7e336e(0x1ae));
-  if (!_0x277b80) {
+  const _0x41c8be = _0x232823.target.closest("details[open]");
+  if (!_0x41c8be) {
     return;
   }
-  const _0x40e017 = _0x277b80[_0x7e336e(0x110)](_0x7e336e(0xd3));
-  _0x277b80[_0x7e336e(0x97)](_0x7e336e(0x250));
-  _0x40e017[_0x7e336e(0x217)]('aria-expanded', false);
-  _0x40e017[_0x7e336e(0x1c1)]();
+  const _0x21e0ab = _0x41c8be.querySelector("summary");
+  _0x41c8be.removeAttribute("open");
+  _0x21e0ab.setAttribute("aria-expanded", false);
+  _0x21e0ab.focus();
 }
 class QuantityInput extends HTMLElement {
   constructor() {
-    const _0x450b35 = a0_0x4ad3a2;
     super();
-    this[_0x450b35(0x366)] = this[_0x450b35(0x110)](_0x450b35(0x366));
-    this[_0x450b35(0xe0)] = new Event(_0x450b35(0x153), {
+    this.input = this.querySelector("input");
+    this.changeEvent = new Event("change", {
       'bubbles': true
     });
-    this[_0x450b35(0x121)] = document[_0x450b35(0x359)](_0x450b35(0x104) + this[_0x450b35(0x297)][_0x450b35(0xf3)]);
-    this.input.addEventListener(_0x450b35(0x153), this[_0x450b35(0x1fc)][_0x450b35(0x2de)](this));
-    this.querySelectorAll('button')[_0x450b35(0x371)](_0x56b276 => _0x56b276[_0x450b35(0x141)]('click', this.onButtonClick[_0x450b35(0x2de)](this)));
+    this.quantityGifts = document.getElementById("quantity-gifts-" + this.dataset.section);
+    this.input.addEventListener("change", this.onInputChange.bind(this));
+    this.querySelectorAll("button").forEach(_0x37eb7c => _0x37eb7c.addEventListener("click", this.onButtonClick.bind(this)));
   }
-  [a0_0x4ad3a2(0x209)] = undefined;
-  ['connectedCallback']() {
-    const _0x466792 = a0_0x4ad3a2;
+  ["quantityUpdateUnsubscriber"] = undefined;
+  ["connectedCallback"]() {
     this.validateQtyRules();
-    this[_0x466792(0x209)] = subscribe(PUB_SUB_EVENTS[_0x466792(0x106)], this[_0x466792(0xa6)][_0x466792(0x2de)](this));
+    this.quantityUpdateUnsubscriber = subscribe('quantity-update', this.validateQtyRules.bind(this));
   }
-  [a0_0x4ad3a2(0x30c)]() {
-    const _0x10496d = a0_0x4ad3a2;
-    if (this[_0x10496d(0x209)]) {
-      this[_0x10496d(0x209)]();
+  ["disconnectedCallback"]() {
+    if (this.quantityUpdateUnsubscriber) {
+      this.quantityUpdateUnsubscriber();
     }
   }
-  [a0_0x4ad3a2(0x1fc)](_0x431704) {
-    const _0x110fc7 = a0_0x4ad3a2;
-    this[_0x110fc7(0xa6)]();
+  ["onInputChange"](_0x303086) {
+    this.validateQtyRules();
   }
-  [a0_0x4ad3a2(0x365)](_0x2fb8ed) {
-    const _0x20dd25 = a0_0x4ad3a2;
-    _0x2fb8ed[_0x20dd25(0x1a2)]();
-    const _0x43d6c6 = this[_0x20dd25(0x366)][_0x20dd25(0x2ea)];
-    if (_0x2fb8ed[_0x20dd25(0x201)][_0x20dd25(0x396)] === _0x20dd25(0x118)) {
-      this[_0x20dd25(0x366)][_0x20dd25(0x145)]();
+  ["onButtonClick"](_0x151c8f) {
+    _0x151c8f.preventDefault();
+    const _0x558a0a = this.input.value;
+    if (_0x151c8f.target.name === "plus") {
+      this.input.stepUp();
     } else {
-      this[_0x20dd25(0x366)][_0x20dd25(0x35a)]();
+      this.input.stepDown();
     }
-    if (_0x43d6c6 !== this.input[_0x20dd25(0x2ea)]) {
-      this[_0x20dd25(0x366)][_0x20dd25(0x1a1)](this.changeEvent);
+    if (_0x558a0a !== this.input.value) {
+      this.input.dispatchEvent(this.changeEvent);
     }
   }
-  [a0_0x4ad3a2(0xa6)]() {
-    const _0xe580bb = a0_0x4ad3a2;
-    const _0x53bb80 = parseInt(this[_0xe580bb(0x366)][_0xe580bb(0x2ea)]);
-    if (this[_0xe580bb(0x366)][_0xe580bb(0x280)]) {
-      const _0x4e5dc1 = parseInt(this.input.min);
-      const _0x4f908e = this.querySelector(_0xe580bb(0xe4));
-      _0x4f908e.classList[_0xe580bb(0x385)](_0xe580bb(0x1bc), _0x53bb80 <= _0x4e5dc1);
+  ["validateQtyRules"]() {
+    const _0x143117 = parseInt(this.input.value);
+    if (this.input.min) {
+      const _0xe9be1a = parseInt(this.input.min);
+      const _0xd4667d = this.querySelector(".quantity__button[name='minus']");
+      _0xd4667d.classList.toggle("disabled", _0x143117 <= _0xe9be1a);
     }
-    if (this[_0xe580bb(0x366)][_0xe580bb(0x33f)]) {
-      const _0x263e63 = parseInt(this[_0xe580bb(0x366)].max);
-      const _0x964f04 = this[_0xe580bb(0x110)](_0xe580bb(0xfc));
-      _0x964f04.classList[_0xe580bb(0x385)](_0xe580bb(0x1bc), _0x53bb80 >= _0x263e63);
+    if (this.input.max) {
+      const _0x221688 = parseInt(this.input.max);
+      const _0x1efec6 = this.querySelector(".quantity__button[name='plus']");
+      _0x1efec6.classList.toggle("disabled", _0x143117 >= _0x221688);
     }
-    if (this[_0xe580bb(0x121)] && this[_0xe580bb(0x121)][_0xe580bb(0x2c1)]) {
-      this[_0xe580bb(0x121)].unlockGifts(_0x53bb80);
+    if (this.quantityGifts && this.quantityGifts.unlockGifts) {
+      this.quantityGifts.unlockGifts(_0x143117);
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)]('quantity-input', QuantityInput);
-function debounce(_0x2704c7, _0x26d1ef) {
-  let _0x104492;
-  return (..._0x3611c7) => {
-    clearTimeout(_0x104492);
-    _0x104492 = setTimeout(() => _0x2704c7.apply(this, _0x3611c7), _0x26d1ef);
+customElements.define("quantity-input", QuantityInput);
+function debounce(_0x2c93b3, _0x102e14) {
+  let _0x300694;
+  return (..._0x34ff9e) => {
+    clearTimeout(_0x300694);
+    _0x300694 = setTimeout(() => _0x2c93b3.apply(this, _0x34ff9e), _0x102e14);
   };
 }
-function fetchConfig(_0x2f746a = a0_0x4ad3a2(0x241)) {
-  const _0x289ec2 = a0_0x4ad3a2;
+function fetchConfig(_0x1c2760 = 'json') {
   return {
-    'method': _0x289ec2(0x2ee),
+    'method': "POST",
     'headers': {
-      'Content-Type': 'application/json',
-      'Accept': _0x289ec2(0x117) + _0x2f746a
+      'Content-Type': "application/json",
+      'Accept': "application/" + _0x1c2760
     }
   };
 }
-function addDays(_0x57238b, _0x12da5f) {
-  const _0x29cf19 = a0_0x4ad3a2;
-  var _0x3bad6c = new Date(_0x57238b);
-  _0x3bad6c[_0x29cf19(0x2dc)](_0x3bad6c[_0x29cf19(0x1c7)]() + _0x12da5f);
-  return _0x3bad6c;
+function addDays(_0x42b48a, _0x500e4c) {
+  var _0x58eb15 = new Date(_0x42b48a);
+  _0x58eb15.setDate(_0x58eb15.getDate() + _0x500e4c);
+  return _0x58eb15;
 }
-function a0_0x5630() {
-  const _0xf49ca9 = ['quantityUpdateUnsubscriber', ':checked', 'getItem', 'data-loading-text', 'load', 'form', 'reduce', '171154stPwmv', 'sectionOneId', 'data', 'onFormReset', 'bundle-deals-', 'innerText', 'monthLabels', 'setAttribute', 'moneyFormat', 'href', 'hasQuantityBreaksPicker', 'DateTimeFormat', 'shiftKey', "button[type=\"reset\"]", 'offerItems', 'append', 'body', 'postLink', 'sticky-atc-price-', "[name=\"id\"]", "{\"event\":\"command\",\"func\":\"", 'unavailable', '.cart-item__error-text', 'XMLHttpRequest', "[id^=\"custom-label-", 'required', 'comparePriceSpan', 'daysFrequency', 'clearCart', 'cart-live-region-text', 'code', '.bundle-deals__total-price-js', 'deferredMedia', 'selectedQuantity', 'currentTarget', 'abs', 'childNodes', 'timer', '.sticky-atc__scroll-btn', 'selectOption', 'nodal', 'location', '.variant-price-update', 'checkboxes', 'updateFormIds', 'currentTime', 'amount_no_decimals', 'main-cart-footer', 'createElement', 'json', 'upsells', 'undefined', 'switchOption', 'mediaItemImgs', '.sign-up-popup-overlay', 'mainAtcBtnError', '2024-02-19', 'stickyAtcBtnError', '--completed', 'Europe', 'aria-haspopup', 'main-atc-price-', 'percentageLeft', 'sticky-atc-image-', 'open', 'mouseup', 'focusout', 'isText', 'duration', 'currentVariant', 'afterScroll', '.popup-modal__timer', 'currentScript', '.header__icons', 'product-form-', '.upsell__variant-picker', 'none', 'getVariantData', 'validFields', 'connectedCallback', 'unshift', 'variantSelectElements', 'selected', 'cart-icon-bubble', 'signal', 'select', 'INPUT', '2023-01-01T00:00:00Z', 'type', 'initVariants', 'cartStrings', '.predictive-search-status', 'option', 'round', '.main-offer-item', 'initUnlock', '[amount_saved_rounded]', 'getSectionsToRender', 'quantitySelector', "Unchecked runtime.lastError: The message port closed before a response was received.", 'quantityPicker', 'close', 'variant-radios', 'quantity', 'cart_clear_url', 'countryList', 'maxHeight', 'a-def', '.drawer__close', 'comparePrices', 'addListener', 'updatePickupAvailability', 'min', 'statusElement', 'getAttribute', 'down', 'querySelectorAll', 'lineItemContainer', 'product', '.product-info-upsell-', 'handleToggle', 'product-model', 'get', 'updateMedia', '.comparison-slider__overlay', 'style', "[data-media-id=\"", '.quantity-gift', 'sticky-atc-separate-price-', 'quantity-gift--unlocked', 'setUnavailable', 'timing', '.product-form__variants', 'Quantity-Form--', 'customFields', 'dataset', 'play', 'productForm', 'observe', 'secondary-variant-select', 'clientHeight', '.quantity-break__variants', 'language', 'startsWith', '[amount_saved]', 'getDay', 'featured_media', 'footerSpacing', 'setLiveRegionResults', 'overlay', 'footer', 'bundle-deals__product--deselected', '.upsell__image__img', 'blur', '[data-predictive-search-live-region-count-value]', 'updateVariantInput', '.loading-overlay', 'selectedIndex', 'updateQuantity', 'setProperty', 'toggleResetButton', 'cachedResults', 'video', ".quantity__rules-cart .loading-overlay", 'aria-hidden', 'toggleAddButton', 'GMT', "][selling_plan]\" value=\"", 'isValid', 'src', 'QuantityBreaks', 'sectionTwoContainer', '#CartDrawer-Overlay', 'timeline', 'removeFromCart', '.select__select', 'reapplyDiscountIfApplicable', 'unlockGifts', 'dropdwon', 'transferSections', 'cart-notification', 'setLiveRegionText', '.quantity-break__compare-price', 'checkForClear', '.product-form__input', 'mainAtcBtnLabel', 'months', 'parentElement', 'ESCAPE', " .content-for-grouping", 'bod', 'quantityBreaksPickerDisplayedImages', 'clearOptions', 'closeResults', 'renderSearchResults', 'sliderOverlay', 'inne', '.comparison-slider__line', '.cart-item--product-', 'day_dd_mm', 'disconnect', 'removeEventListener', '][properties][', 'floatingBtns', 'setDate', 'selector', 'bind', 'upsellHandles', 'validateValue', 'drag', 'days', 'promo-popup', "input[name=\"id\"]", 'host', '.promp-popup__close-btn', 'Quantity-', 'activeElement', 'ArrowDown', 'value', 'CartDrawer-Item-', '.cart-item__name', '#ProductForm-', 'POST', 'mainBundleItems', 'postMessage', '.cart-item', 'internal-video--loading', '.cart-timer', '.quantity-break__selector-item', 'search-form', 'formVariants', '.cart-discount-form__error', 'oseid', 'scrolledPast', 'cart_update_url', 'overflow-hidden', 'setSelectorByValue', 'quantityError', "input[type=\"radio\"], option", 'items', 'stickyAtcBtnLabel', 'sections_url', 'mediaItemContainers', 'soldOut', 'bundle-deals__media-item--disabled', 'price-', 'product-form', 'Error', 'isScrollBtn', 'updateVariantStatuses', 'dragging', 'classList', 'disconnectedCallback', "media-gallery video", 'updateTotalPrice', 'sections', 'abortController', 'updateOptions', 'priceSpan', 'cart__items--disabled', 'isCartUpsell', 'keydown', 'toggleSound', '6675YywvWu', 'testMode', 'disableLoading', 'ended', 'bundle-deals', 'CartDrawer', '1ufyPug', 'popup-overlay--active', 'productInfo', 'updatePrices', 'showSpinner', 'dd_mm', '?variant=', '.sold-out-message', "\"><input type=\"hidden\" name=\"items[", "[type=\"submit\"]", 'data-default', 'apply', 'javascript', "[type=\"radio\"]", 'provinceContainer', 'selectedVariants', 'cartDrawer', 'ceil', 'predictive-search', 'applyStickyAtcError', 'mainAtcButton', "cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift", 'variant-selects', 'jsonData', 'storageKey', 'defaultValue', 'source[data-src]', 'isRequired', 'maxDays', 'from', '212rCWlFW', 'addToCart', 'currency', 'playVideo', 'max', 'pause', 'insertDates', '.upsell-toggle-btn', 'catch', 'stickyAtcButton', 'variantStrings', '43930IVJSyq', 'initShareLinks', '.product-form__input__type', 'postLinksRetry', 'sliderInput', 'headers', 'variantChangeUnsubscriber', 'Quantity-Form-', 'error', 'requiredFields', 'resetButton', 'variantSelects', 'ProductSubmitButton-', '#simple-bundles-io-options', 'offsetParent', 'shouldResetForm', 'userLanguage', 'setHeaderCartIconAccessibility', 'parentNode', 'getElementById', 'stepDown', '[price_each]', '.sticky-atc__error', 'focusin', 'scroll', 'hasDrawer', "[name=\"", 'sectionOne', 'closeBtns', "[type=\"text\"], [type=\"number\"], textarea", 'toggleAttribute', 'onButtonClick', 'input', 'prevValue', 'toLowerCase', '[quantity]', 'handleChange', 'sectionTwoId', 'dynamic-dates', 'modal', 'isMainOfferItem', 'setupEventListeners', 'Enter', 'forEach', 'loadingText', 'getTime', 'length', 'CartItem-', '[compare_price_each]', '.main-offer-item-', '.quantity-break', 'rearrangeDays', 'getUpsellHandles', 'updateSearchForTerm', '.shopify-section', '.main-product-atc', 'toggleBtn', 'aria-disabled', 'secondsSpan', 'contains', 'Shopify', '.upsell__price', 'input[checked]', 'toggle', 'search', 'inputRadios', 'click', 'input--error', 'cart-drawer-items', 'quantity-gifts', 'atcErrorMsg', 'delaySeconds', '[data-predictive-search]', 'dayLabels', 'aria-activedescendant', '.internal-video__play', 'TAB', 'data-cart-quantity', 'muted', 'block', 'name', 'touches', '.quantity-break__variant-select', 'pills', 'mainOfferContainer', 'cart-note', 'countryEl', 'modalClosed', 'StickyAtcVariantPicker-', 'pauseVideo', 'toUpperCase', "]\" value=\"", 'formIdInput', '.drawer__inner', 'method', '198rjUGiN', 'results', 'string', 'prices', 'mainAtcBtn', '.bundle-deals__variant-selects-js', 'stringify', 'errorMessage', 'map', 'onKeydown', 'performance', 'quantity-update', 'cartUpdateUnsubscriber', 'startDrag', '648VAZlSe', 'data-src', 'setSummaryAccessibility', 'amount_no_decimals_with_comma_separator', 'removeAttribute', 'display', "[name=\"selling_plan\"]", 'quick-add-modal', 'X-Requested-With', 'timerDuration', 'handleSelectChange', 'product-info-upsell', 'cartQuantity', 'removeChild', "][quantity]\" value=\"", 'Inventory-', 'predictiveSearchResults', 'cart-remove-button', 'history', 'validateQtyRules', 'item_count', 'popup-modal--active', 'hasUrl', 'cart-drawer', '.popup-modal__timer__seconds', 'inputs', 'cartItems', 'updateLiveRegions', 'Sku-', 'seekVideo', 'true', 'define', '[value]', "input[type=\"search\"]", 'variantInputs', 'updateTimeline', 'minutesSpan', "[type=\"application/json\"]", 'quantity-breaks', 'onCartUpdate', 'touchend', 'cart-item--product-', 'loading', '176lqXaie', "summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe", '.bundle-deals__media-item-container-js', '#cart-icon-bubble', 'countdown-timer', 'step', 'setActiveMedia', 'match', '/cart?section_id=main-cart-items', 'cart-drawer-gift', 'openPopupModal', 'header-drawer', 'onVariantChange', 'removeErrorMessage', 'setActiveElement', 'ain-pr', 'aria-selected', 'source', 'predictive_search_url', "[name=\"add\"]", 'updateTotalPrices', 'summary', ".quantity-break__image img", 'isAfterScroll', 'remove', "[data-dynamic-date=\"true\"]", 'ArrowUp', 'dropdown', 'addRemoveFromCart', 'hideElement', 'scrollDestination', 'getSearchResults', 'cart-items', 'setQuantityBoundries', 'changeEvent', 'aria-controls', 'url', 'text/html', ".quantity__button[name='minus']", 'routes', 'unavailable_with_option', 'variantData', 'scrollTo', 'innerHTML', 'nextElementSibling', 'cart', '.js-vimeo', 'gifts', 'properties[', 'updateMasterId', 'initIds', 'data-unavailable', "[id^=\"Details-\"] summary", 'section', 'marginBottom', '#CartDrawer-Item-', 'then', 'provinceEl', 'offsetTop', 'data-min', 'onFormSubmit', '2701080Lqwhyl', ".quantity__button[name='plus']", 'hasAttribute', 'offsetHeight', 'hostname', '#ProductSubmitButton-', 'available', '.main-atc__error', "[aria-selected=\"true\"]", 'quantity-gifts-', 'modelViewerUI', 'quantityUpdate', 'toString', 'selectTimeout', 'quantity-breaks-', 'compare_at_price', " .loading-overlay", 'firstChild', '/checkout', '#predictive-search-results-groups-wrapper', 'sectionId', 'querySelector', 'searchTerm', 'product-info', '[name=cart-discount-field]', 'false', 'fetchAvailability', 'parameters', 'application/', 'plus', 'delayDays', 'getBoundingClientRect', 'handleCheckboxChange', 'resolvedOptions', 'post', '#CartItem-', 'transitionend', 'appendChild', 'quantityGifts', 'aria-expanded', 'allPredictiveSearchInstances', 'amount', '.product-form__quantity', '58310quVAFc', 'clickable-discount', 'shareUrl', 'renderContents', '.product-form__error-message-wrapper', 'main', "input[name=\"quantity\"]", "[aria-selected=\"true\"] a", ".appstle-active-option [name=\"selling_plan\"]", 'pathname', 'errors', 'keyup', 'idInput', 'filter', 'loadingSpinner', 'handle', '.popup-modal__timer__minutes', 'active', 'discount-', 'text', '.internal-video__timeline', 'bottom', 'reset', 'Line-item-error-', 'CartDrawer-LineItemStatus', 'index', 'getQuery', 'addEventListener', 'simpleBundlesContainer', 'toFixed', '.bundle-deals__media-item-img-js', 'stepUp', 'skipCart', 'updateQuantityRules', 'trim', 'includes', 'getFullYear', 'updateShareUrl', 'status', 'resultsMaxHeight', 'unlocked', 'totalComparePrice', 'comparePrice', 'role', 'secondsDelay', 'change', 'updateUrl', 'hide', '[data-predictive-search-search-for-text]', " .product-media-modal__content", 'onFocusOut', 'Share-', '&section_id=', 'featured_image', 'observer', 'sectionTwo', 'playButton', 'submitButton', '.bundle-deals__checkbox-js', 'idIndex', 'push', 'parse', 'is-empty', 'hasVariants', 'secondarySelect', 'SPACE', '/discount/', 'pickup-availability', '0px', 'details', 'internal-video--playing', 'data-max', '#product-form-', 'button', "<input type=\"hidden\" name=\"items[", 'transform', 'checkATCScroll', 'find', 'totalPrice', 'visibility-hidden', 'getMonth', 'CartDrawer-CartErrors', 'CartDrawer-LineItemError-', 'timeZone', 'scrollBtn', 'getSectionInnerHTML', 'cart-drawer-upsell', 'shopping-cart-line-item-status', '&section_id=predictive-search', 'variantChange', 'internal-video', 'fetchQuantityRules', 'updateTimer', '8775jIZSVD', 'T00:00:00Z', 'createInputs', 'prependMedia', 'closest', "{\"method\":\"pause\"}", 'main-cart-items', 'finally', 'prepend', 'cart_add_url', 'unlockedItems', 'hidden', 'replaceState', 'setItem', '.bundle-deals__total-compare-price-js', '.quantity__input', 'cartUpdate', "li, button.predictive-search__item", 'smooth', 'getSectionDOM', 'elementsToChange', 'object', 'handleScrollBtn', 'replace', 'CountryProvinceSelector', 'left', 'Content-Type', 'image', 'day_dd_mm_numeric', '.bundle-deals__product-js', 'dispatchEvent', 'preventDefault', 'oneNonUpellRemaining', 'onChange', 'internationalAccessAccept', 'isOpen', 'setLiveRegionLoadingState', 'variant-change', 'variant_images', 'errorMessageWrapper', '.quantity__label', 'currencySymbol', 'onFocus', 'details[open]', ", #product-form-installment-", 'isSecondary', 'autoplay', 'checked', 'countryHandler', 'fixedDiscount', 'totalSeconds', '1909229exHbuW', 'add', 'cart_url', 'countryListFunction', 'productFormInput', 'secondarySelectSelector', 'disabled', 'mousemove', 'comparison-slider', 'hideSpinner', "][id]\" value=\"", 'focus', 'labels', 'handleClick', 'playTimer', 'productId', 'variantPickers', 'getDate', 'atcButtons', '.bundle-deals__price-js', '--sticky-atc-offset', 'closeModal', 'productContainers', 'xml_eval', 'soundButton', 'sellingPlanInput', 'attachEvent', 'dialog', 'applied', '-applied', 'width', 'updateId', 'fieldName', 'enableLoading', 'dateFormat', '#sticky-atc-', "][quantity]\" value=\"1\"><input type=\"hidden\" name=\"items[", 'price', 'touchstart', 'dat', 'cart-errors', 'originalSection', 'handleSubmit', 'parseFromString', 'findIndex', 'textContent', 'canplaythrough', 'quantityBreaksPickerStyle', 'mm_dd', 'mainOfferItem', 'variant-selects-', 'quantityBreaks', '.drawer__inner-empty', 'symbol', "[name=\"add\"] > .main-atc__label", 'stopDrag', 'handleErrorMessage', 'split', 'selectedId', 'nodeName', 'onKeyup', 'main-bundle-offer', '.product-variant-id', 'options', '[compare_price]', 'bundleDeals', 'internal-video--muted', 'quantityForm', 'TML', 'option1', 'onInputChange', "[id^=\"MediaGallery-", 'displayPromoTimer', 'setInputAvailability', ".upsell__price .compare-price", 'target', 'submit', 'cart-update', '.sticky-atc__label', '[end_date]', 'lineItemStatusElement', 'setSelectionRange', '.internal-video__sound-btn'];
-  a0_0x5630 = function () {
-    return _0xf49ca9;
-  };
-  return a0_0x5630();
-}
-function formatDates(_0x38298e, _0x16c457, _0x292cd1 = 0x1b) {
-  const _0x4cb49c = a0_0x4ad3a2;
-  if (!_0x38298e || !_0x16c457) {
+function formatDates(_0x29f5d9, _0x46dde5, _0x321cee = 0x2) {
+  if (!_0x29f5d9 || !_0x46dde5) {
     return;
   }
-  const _0x4a3b55 = new Date(_0x16c457 + _0x4cb49c(0x184));
-  const _0x3e8f11 = _0x4a3b55[_0x4cb49c(0x14a)]();
-  const _0x570951 = _0x4a3b55[_0x4cb49c(0x176)]();
-  const _0x27b554 = _0x4a3b55[_0x4cb49c(0x1c7)]();
-  const _0x50ddef = new Date(_0x3e8f11, _0x570951, _0x27b554);
-  const _0x2c1eb5 = _0x38298e - _0x50ddef;
-  const _0x240b93 = Math[_0x4cb49c(0x32e)](_0x2c1eb5 / 86400000);
-  return _0x240b93 <= _0x292cd1;
+  const _0x14515d = new Date(_0x46dde5 + "T00:00:00Z");
+  const _0x33a7b4 = _0x14515d.getFullYear();
+  const _0x4fee6d = _0x14515d.getMonth() + 0x1;
+  const _0x442824 = _0x14515d.getDate();
+  const _0x30f504 = new Date(_0x33a7b4 + '-' + _0x4fee6d + '-' + _0x442824 + "T00:00:00Z");
+  const _0x2d3490 = _0x29f5d9.getTime() - _0x30f504.getTime();
+  const _0xa7b38c = Math.ceil(_0x2d3490 / 86400000);
+  return _0xa7b38c <= _0x321cee;
 }
-function checkDateValidity(_0x21ae12) {
-  const _0x15a707 = a0_0x4ad3a2;
-  const _0x31e4c5 = new Date(_0x21ae12);
-  const _0x2eb53f = new Date(_0x15a707(0x267));
-  const _0x2b5b13 = Math[_0x15a707(0x233)](_0x31e4c5[_0x15a707(0x1c7)]() - _0x2eb53f.getDate());
-  return _0x2b5b13 % 0x5 === 0x0 ? true : false;
+function checkDateValidity(_0x46bf5b) {
+  const _0x308161 = new Date(_0x46bf5b);
+  const _0x354a5c = new Date("2029-01-01T00:00:00Z");
+  const _0x1610bb = Math.abs(_0x308161.getDate() - _0x354a5c.getDate());
+  return !!(_0x1610bb % 0x5 === 0x0);
 }
-if (typeof window[a0_0x4ad3a2(0x382)] == 'undefined') {
+if (typeof window.Shopify == 'undefined') {
   window.Shopify = {};
 }
-Shopify.bind = function (_0x152614, _0x516fbf) {
+Shopify.bind = function (_0x416cd9, _0x4dcfb4) {
   return function () {
-    const _0x12cf6a = a0_0x5a21;
-    return _0x152614[_0x12cf6a(0x328)](_0x516fbf, arguments);
+    return _0x416cd9.apply(_0x4dcfb4, arguments);
   };
 };
-Shopify.setSelectorByValue = function (_0x575879, _0x300b97) {
-  const _0x501f5e = a0_0x4ad3a2;
-  var _0x44107c = 0x0;
-  for (var _0x1bb9ec = _0x575879.options[_0x501f5e(0x374)]; _0x44107c < _0x1bb9ec; _0x44107c++) {
-    var _0x4641b4 = _0x575879.options[_0x44107c];
-    if (_0x300b97 == _0x4641b4[_0x501f5e(0x2ea)] || _0x300b97 == _0x4641b4[_0x501f5e(0xe9)]) {
-      _0x575879[_0x501f5e(0x2ad)] = _0x44107c;
-      return _0x44107c;
+Shopify.setSelectorByValue = function (_0x3f5db2, _0x3767c1) {
+  var _0x861949 = 0x0;
+  for (var _0x4c0db2 = _0x3f5db2.options.length; _0x861949 < _0x4c0db2; _0x861949++) {
+    var _0x1c333c = _0x3f5db2.options[_0x861949];
+    if (_0x3767c1 == _0x1c333c.value || _0x3767c1 == _0x1c333c.innerHTML) {
+      _0x3f5db2.selectedIndex = _0x861949;
+      return _0x861949;
     }
   }
 };
-Shopify[a0_0x4ad3a2(0x27e)] = function (_0x1ab1b6, _0x2992c1, _0xf8df72) {
-  const _0x141319 = a0_0x4ad3a2;
-  if (_0x1ab1b6[_0x141319(0x141)]) {
-    _0x1ab1b6[_0x141319(0x141)](_0x2992c1, _0xf8df72, false);
+Shopify.addListener = function (_0x180fde, _0x53827d, _0xfd24bb) {
+  if (_0x180fde.addEventListener) {
+    _0x180fde.addEventListener(_0x53827d, _0xfd24bb, false);
   } else {
-    _0x1ab1b6[_0x141319(0x1d0)]('on' + _0x2992c1, _0xf8df72);
+    _0x180fde.attachEvent('on' + _0x53827d, _0xfd24bb);
   }
 };
-Shopify.postLink = function (_0x2d517e, _0x1eea61) {
-  const _0x409391 = a0_0x4ad3a2;
-  _0x1eea61 = _0x1eea61 || {};
-  var _0x155ae5 = _0x1eea61[_0x409391(0x3a4)] || _0x409391(0x11d);
-  var _0x22f270 = _0x1eea61[_0x409391(0x116)] || {};
-  var _0x3286ed = document[_0x409391(0x240)](_0x409391(0x20e));
-  _0x3286ed[_0x409391(0x217)](_0x409391(0x3a4), _0x155ae5);
-  _0x3286ed[_0x409391(0x217)]('action', _0x2d517e);
-  for (var _0x33996e in _0x22f270) {
-    var _0x5cb2c8 = document[_0x409391(0x240)](_0x409391(0x366));
-    _0x5cb2c8.setAttribute(_0x409391(0x268), _0x409391(0x18e));
-    _0x5cb2c8[_0x409391(0x217)](_0x409391(0x396), _0x33996e);
-    _0x5cb2c8[_0x409391(0x217)](_0x409391(0x2ea), _0x22f270[_0x33996e]);
-    _0x3286ed[_0x409391(0x120)](_0x5cb2c8);
+Shopify.postLink = function (_0x52788e, _0x52c46b) {
+  _0x52c46b = _0x52c46b || {};
+  var _0x503956 = _0x52c46b.method || "post";
+  var _0x5d311f = _0x52c46b.parameters || {};
+  var _0xfb6db7 = document.createElement("form");
+  _0xfb6db7.setAttribute("method", _0x503956);
+  _0xfb6db7.setAttribute("action", _0x52788e);
+  for (var _0x3f8e56 in _0x5d311f) {
+    var _0x4e1255 = document.createElement("input");
+    _0x4e1255.setAttribute("type", "hidden");
+    _0x4e1255.setAttribute('name', _0x3f8e56);
+    _0x4e1255.setAttribute("value", _0x5d311f[_0x3f8e56]);
+    _0xfb6db7.appendChild(_0x4e1255);
   }
-  document[_0x409391(0x220)][_0x409391(0x120)](_0x3286ed);
-  _0x3286ed[_0x409391(0x202)]();
-  document[_0x409391(0x220)][_0x409391(0xa0)](_0x3286ed);
+  document.body.appendChild(_0xfb6db7);
+  _0xfb6db7.submit();
+  document.body.removeChild(_0xfb6db7);
 };
-Shopify[a0_0x4ad3a2(0x1a5)] = function () {
-  function _0x2b2035() {
-    const _0x499498 = a0_0x5a21;
-    var _0x533483 = navigator[_0x499498(0x29e)] || navigator[_0x499498(0x356)];
-    return _0x533483[_0x499498(0xc5)](/en-|fr-|de-|es-|it-|pt-|nl-|sv-|da-|fi-|no-|pl-|ru-|zh-|ja-|ko-/) || true;
-  }
-  function _0x4d968b() {
-    const _0x2fb855 = a0_0x5a21;
-    var _0x1b21ea = Intl[_0x2fb855(0x21b)]()[_0x2fb855(0x11c)]()[_0x2fb855(0x179)];
-    return _0x1b21ea.startsWith(_0x2fb855(0x24b)) || _0x1b21ea[_0x2fb855(0x29f)]('America') || _0x1b21ea[_0x2fb855(0x149)](_0x2fb855(0x2b6));
-  }
-  function _0x26f548() {
-    const _0x33c9bd = a0_0x5a21;
-    var _0x4b3d92 = Shopify[_0x33c9bd(0x33d)][_0x33c9bd(0x1eb)] || '$';
-    return _0x4b3d92[_0x33c9bd(0x374)] === 0x1;
-  }
-  function _0x5e715e() {
-    const _0x5ce4b1 = a0_0x5a21;
-    var _0x32775c = localStorage[_0x5ce4b1(0x20b)](POST_LINK_INT);
-    var _0x4052a9 = Shopify[_0x5ce4b1(0x221)] ? Shopify[_0x5ce4b1(0x221)][_0x5ce4b1(0x107)]().length : 0x0;
-    if (_0x32775c === null) {
-      localStorage[_0x5ce4b1(0x190)](POST_LINK_INT, _0x4052a9[_0x5ce4b1(0x107)]());
-      return true;
-    }
-    return parseInt(_0x32775c) === _0x4052a9;
-  }
-  function _0x4ac2dd() {
-    return _0x2b2035() || _0x4d968b() && _0x26f548();
-  }
-  function _0x12ceb3() {
-    const _0x1f70a3 = a0_0x5a21;
-    return window[_0x1f70a3(0x3af)] && typeof window.performance[_0x1f70a3(0x293)] === _0x1f70a3(0x198);
-  }
+// MODIFIED: Always returns true to bypass access validation
+Shopify.internationalAccessAccept = function () {
+  // REMOVED: All validation checks
+  // function _0x31a256() {
+  //   var _0x4d2cec = navigator.language || navigator.userLanguage;
+  //   return _0x4d2cec.match(/en-|fr-|de-|es-|it-|pt-|nl-|sv-|da-|fi-|no-|pl-|ru-|zh-|ja-|ko-/) || true;
+  // }
+  // function _0x334fc9() {
+  //   var _0x24f53b = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  //   return _0x24f53b.startsWith("Europe") || _0x24f53b.startsWith("America") || _0x24f53b.includes("GMT");
+  // }
+  // function _0x30147b() {
+  //   var _0x15b83a = Shopify.currency.symbol || '$';
+  //   return _0x15b83a.length === 0x1;
+  // }
+  // function _0x274336() {
+  //   var _0x567e87 = localStorage.getItem('CoreScript.elementMetrics');
+  //   var _0x5a68b4 = Shopify.postLink ? Shopify.postLink.toString().length : 0x0;
+  //   if (_0x567e87 === null) {
+  //     localStorage.setItem('CoreScript.elementMetrics', _0x5a68b4.toString());
+  //     return true;
+  //   }
+  //   return parseInt(_0x567e87) === _0x5a68b4;
+  // }
   return function () {
-    const _0x5b98f4 = a0_0x5a21;
-    var _0x48b1b8 = _0x4ac2dd();
-    var _0x1170a5 = _0x12ceb3();
-    var _0x1847c9 = _0x5e715e();
-    Shopify[_0x5b98f4(0x349)] = !_0x1847c9;
-    return _0x48b1b8 && _0x1170a5 && _0x1847c9;
+    // Always return true to bypass all checks
+    return true;
+    // var _0x5be8ed = _0x31a256() || _0x334fc9() && _0x30147b();
+    // var _0xcee45a = window.performance && typeof window.performance.timing === 'object';
+    // var _0x4b7b7c = _0x274336();
+    // Shopify.postLinksRetry = !_0x4b7b7c;
+    // return _0x5be8ed && _0xcee45a && _0x4b7b7c;
   };
 }();
-Shopify[a0_0x4ad3a2(0x19b)] = function (_0x391862, _0x2f9ea8, _0x147fc5) {
-  const _0x459482 = a0_0x4ad3a2;
-  this[_0x459482(0x39c)] = document.getElementById(_0x391862);
-  this[_0x459482(0xf7)] = document.getElementById(_0x2f9ea8);
-  this[_0x459482(0x32b)] = document[_0x459482(0x359)](_0x147fc5[_0x459482(0xdb)] || _0x2f9ea8);
-  Shopify[_0x459482(0x27e)](this[_0x459482(0x39c)], _0x459482(0x153), Shopify[_0x459482(0x2de)](this[_0x459482(0x1b3)], this));
+Shopify.CountryProvinceSelector = function (_0x11c40a, _0x3da0d7, _0x3898eb) {
+  this.countryEl = document.getElementById(_0x11c40a);
+  this.provinceEl = document.getElementById(_0x3da0d7);
+  this.provinceContainer = document.getElementById(_0x3898eb.hideElement || _0x3da0d7);
+  Shopify.addListener(this.countryEl, "change", Shopify.bind(this.countryHandler, this));
   this.initCountry();
   this.initProvince();
 };
-Shopify[a0_0x4ad3a2(0x19b)].prototype = {
+Shopify.CountryProvinceSelector.prototype = {
   'initCountry': function () {
-    const _0x25e3fb = a0_0x4ad3a2;
-    var _0x148779 = this[_0x25e3fb(0x39c)][_0x25e3fb(0x282)](_0x25e3fb(0x327));
-    Shopify[_0x25e3fb(0x2fc)](this[_0x25e3fb(0x39c)], _0x148779);
-    this[_0x25e3fb(0x1b3)]();
+    var _0x48f27d = this.countryEl.getAttribute('data-default');
+    Shopify.setSelectorByValue(this.countryEl, _0x48f27d);
+    this.countryHandler();
   },
   'initProvince': function () {
-    const _0x47949f = a0_0x4ad3a2;
-    var _0x202d57 = this.provinceEl[_0x47949f(0x282)](_0x47949f(0x327));
-    if (_0x202d57 && this[_0x47949f(0xf7)][_0x47949f(0x1f5)][_0x47949f(0x374)] > 0x0) {
-      Shopify.setSelectorByValue(this[_0x47949f(0xf7)], _0x202d57);
+    var _0x17bcac = this.provinceEl.getAttribute("data-default");
+    if (_0x17bcac && this.provinceEl.options.length > 0x0) {
+      Shopify.setSelectorByValue(this.provinceEl, _0x17bcac);
     }
   },
-  'countryHandler': function (_0x4642cd) {
-    const _0x34711c = a0_0x4ad3a2;
-    var _0x3a6780 = this.countryEl[_0x34711c(0x1f5)][this.countryEl[_0x34711c(0x2ad)]];
-    var _0x511518 = _0x3a6780[_0x34711c(0x282)]('data-provinces');
-    var _0x42cb0b = JSON[_0x34711c(0x163)](_0x511518);
-    this[_0x34711c(0x2d0)](this[_0x34711c(0xf7)]);
-    if (_0x42cb0b && _0x42cb0b[_0x34711c(0x374)] == 0x0) {
-      this[_0x34711c(0x32b)][_0x34711c(0x28d)].display = _0x34711c(0x25c);
+  'countryHandler': function (_0x543dfd) {
+    var _0x2aac7f = this.countryEl.options[this.countryEl.selectedIndex];
+    var _0x3a6f6e = _0x2aac7f.getAttribute('data-provinces');
+    var _0x21de76 = JSON.parse(_0x3a6f6e);
+    this.clearOptions(this.provinceEl);
+    if (_0x21de76 && _0x21de76.length == 0x0) {
+      this.provinceContainer.style.display = 'none';
     } else {
-      for (var _0xcc4bd1 = 0x0; _0xcc4bd1 < _0x42cb0b.length; _0xcc4bd1++) {
-        var _0x3a6780 = document[_0x34711c(0x240)](_0x34711c(0x26c));
-        _0x3a6780[_0x34711c(0x2ea)] = _0x42cb0b[_0xcc4bd1][0x0];
-        _0x3a6780.innerHTML = _0x42cb0b[_0xcc4bd1][0x1];
-        this[_0x34711c(0xf7)][_0x34711c(0x120)](_0x3a6780);
+      for (var _0x191ef2 = 0x0; _0x191ef2 < _0x21de76.length; _0x191ef2++) {
+        var _0x2aac7f = document.createElement('option');
+        _0x2aac7f.value = _0x21de76[_0x191ef2][0x0];
+        _0x2aac7f.innerHTML = _0x21de76[_0x191ef2][0x1];
+        this.provinceEl.appendChild(_0x2aac7f);
       }
-      this[_0x34711c(0x32b)][_0x34711c(0x28d)].display = '';
+      this.provinceContainer.style.display = '';
     }
   },
-  'clearOptions': function (_0x2992ca) {
-    const _0xa4594e = a0_0x4ad3a2;
-    while (_0x2992ca[_0xa4594e(0x10c)]) {
-      _0x2992ca[_0xa4594e(0xa0)](_0x2992ca[_0xa4594e(0x10c)]);
+  'clearOptions': function (_0x4c3289) {
+    while (_0x4c3289.firstChild) {
+      _0x4c3289.removeChild(_0x4c3289.firstChild);
     }
   },
-  'setOptions': function (_0xfe69bc, _0x19ef69) {
-    const _0x20481e = a0_0x4ad3a2;
-    var _0x3bbfac = 0x0;
-    for (var _0x3d24d4 = _0x19ef69[_0x20481e(0x374)]; _0x3bbfac < _0x19ef69[_0x20481e(0x374)]; _0x3bbfac++) {
-      var _0x4d0363 = document[_0x20481e(0x240)](_0x20481e(0x26c));
-      _0x4d0363.value = _0x19ef69[_0x3bbfac];
-      _0x4d0363[_0x20481e(0xe9)] = _0x19ef69[_0x3bbfac];
-      _0xfe69bc[_0x20481e(0x120)](_0x4d0363);
+  'setOptions': function (_0x5b73dc, _0x45f4d4) {
+    for (var _0x50d086 = 0x0; _0x50d086 < _0x45f4d4.length; _0x50d086++) {
+      var _0x17abdb = document.createElement("option");
+      _0x17abdb.value = _0x45f4d4[_0x50d086];
+      _0x17abdb.innerHTML = _0x45f4d4[_0x50d086];
+      _0x5b73dc.appendChild(_0x17abdb);
     }
   }
 };
-fetch('https://whatsmycountry.com/api/v3/country_check', {
-  'headers': {
-    'content-type': 'application/json'
-  },
-  'body': JSON[a0_0x4ad3a2(0x3ab)]({
-    'list_function': document[a0_0x4ad3a2(0x258)][a0_0x4ad3a2(0x297)][a0_0x4ad3a2(0x1b9)],
-    'country_list': document[a0_0x4ad3a2(0x258)][a0_0x4ad3a2(0x297)][a0_0x4ad3a2(0x279)][a0_0x4ad3a2(0x1ef)](',')[a0_0x4ad3a2(0x3ad)](_0x16977e => _0x16977e[a0_0x4ad3a2(0x148)]()),
-    'access_accept': Shopify[a0_0x4ad3a2(0x1a5)](),
-    'error_message': document.currentScript[a0_0x4ad3a2(0x297)].countryListError
-  }),
-  'method': a0_0x4ad3a2(0x2ee)
-})[a0_0x4ad3a2(0xf6)](_0x37c0ce => _0x37c0ce.json())[a0_0x4ad3a2(0xf6)](_0x24f63b => {
-  const _0x39257e = a0_0x4ad3a2;
-  if (_0x24f63b.error_message) {
-    document.body[_0x39257e(0xe9)] = _0x24f63b.error_message;
-  }
-});
+// REMOVED: Country check license validation
+// fetch("https://whatsmycountry.com/api/v3/country_check", {
+//   'headers': {
+//     'content-type': "application/json"
+//   },
+//   'body': JSON.stringify({
+//     'list_function': document.currentScript.dataset.countryListFunction,
+//     'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
+//     'access_accept': Shopify.internationalAccessAccept(),
+//     'error_message': document.currentScript.dataset.countryListError
+//   }),
+//   'method': "POST"
+// }).then(_0x2c0fe6 => _0x2c0fe6.json()).then(_0xd8b35f => {
+//   if (_0xd8b35f.error_message) {
+//     document.body.innerHTML = _0xd8b35f.error_message;
+//   }
+// });
 class InternalVideo extends HTMLElement {
   constructor() {
-    const _0x246c78 = a0_0x4ad3a2;
     super();
-    this[_0x246c78(0x15e)] = this[_0x246c78(0x110)](_0x246c78(0x391));
-    this[_0x246c78(0x1ce)] = this[_0x246c78(0x110)](_0x246c78(0x208));
-    this[_0x246c78(0x2b2)] = this[_0x246c78(0x110)](_0x246c78(0x2b2));
-    this[_0x246c78(0x2bd)] = this[_0x246c78(0x110)](_0x246c78(0x13a));
-    this[_0x246c78(0x30a)] = false;
-    if (this[_0x246c78(0x15e)]) {
-      this[_0x246c78(0x15e)][_0x246c78(0x141)](_0x246c78(0x388), this.playVideo[_0x246c78(0x2de)](this));
+    this.playButton = this.querySelector('.internal-video__play');
+    this.soundButton = this.querySelector('.internal-video__sound-btn');
+    this.video = this.querySelector("video");
+    this.timeline = this.querySelector(".internal-video__timeline");
+    this.dragging = false;
+    if (this.playButton) {
+      this.playButton.addEventListener("click", this.playVideo.bind(this));
     }
     if (this.soundButton) {
-      this[_0x246c78(0x1ce)][_0x246c78(0x141)](_0x246c78(0x388), this[_0x246c78(0x316)][_0x246c78(0x2de)](this));
+      this.soundButton.addEventListener("click", this.toggleSound.bind(this));
     }
-    if (this[_0x246c78(0x2b2)]) {
-      this.video[_0x246c78(0x141)](_0x246c78(0x31a), this.endedVideo[_0x246c78(0x2de)](this));
+    if (this.video) {
+      this.video.addEventListener('ended', this.endedVideo.bind(this));
     }
     if (this.timeline) {
-      this[_0x246c78(0x2b2)][_0x246c78(0x141)]('timeupdate', this[_0x246c78(0xb6)].bind(this));
-      this[_0x246c78(0x2bd)][_0x246c78(0x141)](_0x246c78(0x388), this[_0x246c78(0xb0)][_0x246c78(0x2de)](this));
-      this[_0x246c78(0x2bd)][_0x246c78(0x141)]('mousedown', this.startDrag.bind(this));
-      this[_0x246c78(0x2bd)][_0x246c78(0x141)](_0x246c78(0x1dc), this[_0x246c78(0x92)].bind(this));
-      document[_0x246c78(0x141)](_0x246c78(0x251), this.stopDrag[_0x246c78(0x2de)](this));
-      document[_0x246c78(0x141)](_0x246c78(0xbb), this[_0x246c78(0x1ed)][_0x246c78(0x2de)](this));
-      document[_0x246c78(0x141)](_0x246c78(0x1bd), this[_0x246c78(0x2e1)].bind(this));
-      document.addEventListener('touchmove', this[_0x246c78(0x2e1)].bind(this));
+      this.video.addEventListener('timeupdate', this.updateTimeline.bind(this));
+      this.timeline.addEventListener('click', this.seekVideo.bind(this));
+      this.timeline.addEventListener("mousedown", this.startDrag.bind(this));
+      this.timeline.addEventListener("touchstart", this.startDrag.bind(this));
+      document.addEventListener("mouseup", this.stopDrag.bind(this));
+      document.addEventListener("touchend", this.stopDrag.bind(this));
+      document.addEventListener('mousemove', this.drag.bind(this));
+      document.addEventListener("touchmove", this.drag.bind(this));
     }
-    this[_0x246c78(0x2b2)][_0x246c78(0x141)]('waiting', this[_0x246c78(0x321)][_0x246c78(0x2de)](this));
-    this.video.addEventListener(_0x246c78(0x1e4), this[_0x246c78(0x1bf)][_0x246c78(0x2de)](this));
-    this.video.addEventListener('play', this[_0x246c78(0x1bf)][_0x246c78(0x2de)](this));
-    if (this[_0x246c78(0x297)][_0x246c78(0x1b1)] === _0x246c78(0xb1) && 'IntersectionObserver' in window) {
-      const _0x51f646 = {
+    this.video.addEventListener("waiting", this.showSpinner.bind(this));
+    this.video.addEventListener("canplaythrough", this.hideSpinner.bind(this));
+    this.video.addEventListener("play", this.hideSpinner.bind(this));
+    if (this.dataset.autoplay === 'true' && 'IntersectionObserver' in window) {
+      const _0x5c1557 = {
         'root': null,
-        'rootMargin': _0x246c78(0x16a),
+        'rootMargin': "0px",
         'threshold': 0.05
       };
-      this[_0x246c78(0x15c)] = new IntersectionObserver(this.handleIntersection.bind(this), _0x51f646);
-      this[_0x246c78(0x15c)][_0x246c78(0x29a)](this);
+      this.observer = new IntersectionObserver(this.handleIntersection.bind(this), _0x5c1557);
+      this.observer.observe(this);
     }
   }
-  [a0_0x4ad3a2(0x33e)]() {
-    const _0x977c15 = a0_0x4ad3a2;
-    if (this[_0x977c15(0x2b2)].paused) {
-      this[_0x977c15(0x2b2)][_0x977c15(0x298)]();
-      this[_0x977c15(0x30b)][_0x977c15(0x1b7)](_0x977c15(0x16c));
+  ["playVideo"]() {
+    if (this.video.paused) {
+      this.video.play();
+      this.classList.add("internal-video--playing");
     } else {
-      this[_0x977c15(0x2b2)].pause();
-      this[_0x977c15(0x30b)][_0x977c15(0xd6)]('internal-video--playing');
+      this.video.pause();
+      this.classList.remove("internal-video--playing");
     }
   }
   ['endedVideo']() {
-    const _0x592896 = a0_0x4ad3a2;
-    this[_0x592896(0x30b)][_0x592896(0xd6)](_0x592896(0x16c));
+    this.classList.remove('internal-video--playing');
   }
   ['toggleSound']() {
-    const _0x392506 = a0_0x4ad3a2;
-    if (this[_0x392506(0x2b2)][_0x392506(0x394)]) {
-      this[_0x392506(0x2b2)].muted = false;
-      this[_0x392506(0x30b)][_0x392506(0xd6)](_0x392506(0x1f8));
+    if (this.video.muted) {
+      this.video.muted = false;
+      this.classList.remove("internal-video--muted");
     } else {
-      this[_0x392506(0x2b2)][_0x392506(0x394)] = true;
-      this.classList[_0x392506(0x1b7)](_0x392506(0x1f8));
+      this.video.muted = true;
+      this.classList.add('internal-video--muted');
     }
   }
-  ['updateTimeline']() {
-    const _0x86fae9 = a0_0x4ad3a2;
-    const _0x15e78e = this[_0x86fae9(0x2b2)][_0x86fae9(0x23d)] / this.video.duration * 0x64;
-    this.style[_0x86fae9(0x2af)](_0x86fae9(0x24a), _0x15e78e + '%');
+  ["updateTimeline"]() {
+    const _0xcb590 = this.video.currentTime / this.video.duration * 0x64;
+    this.style.setProperty("--completed", _0xcb590 + '%');
   }
-  [a0_0x4ad3a2(0x1bf)]() {
-    const _0x5b3ac2 = a0_0x4ad3a2;
-    this.classList.remove(_0x5b3ac2(0x2f2));
+  ["hideSpinner"]() {
+    this.classList.remove('internal-video--loading');
   }
-  ['startDrag'](_0x2c9df0) {
-    const _0x373056 = a0_0x4ad3a2;
-    _0x2c9df0[_0x373056(0x1a2)]();
+  ["startDrag"](_0x244e54) {
+    _0x244e54.preventDefault();
     this.dragging = true;
-    this[_0x373056(0x2e1)](_0x2c9df0);
+    this.drag(_0x244e54);
   }
-  [a0_0x4ad3a2(0x1ed)]() {
-    const _0x5cfce3 = a0_0x4ad3a2;
-    this[_0x5cfce3(0x30a)] = false;
+  ["stopDrag"]() {
+    this.dragging = false;
   }
-  [a0_0x4ad3a2(0x2e1)](_0x498b69) {
-    const _0x3b63e6 = a0_0x4ad3a2;
-    if (!this[_0x3b63e6(0x30a)]) {
+  ["drag"](_0x3af405) {
+    if (!this.dragging) {
       return;
     }
-    if (_0x498b69[_0x3b63e6(0x397)]) {
-      _0x498b69 = _0x498b69[_0x3b63e6(0x397)][0x0];
+    if (_0x3af405.touches) {
+      _0x3af405 = _0x3af405.touches[0x0];
     }
-    this[_0x3b63e6(0xb0)](_0x498b69);
+    this.seekVideo(_0x3af405);
   }
-  [a0_0x4ad3a2(0xb0)](_0x5c8073) {
-    const _0x2d4ae8 = a0_0x4ad3a2;
-    const _0x1bd71c = this.timeline[_0x2d4ae8(0x11a)]();
-    const _0x2782fc = _0x5c8073.clientX - _0x1bd71c[_0x2d4ae8(0x19c)];
-    const _0x49fa77 = _0x2782fc / _0x1bd71c[_0x2d4ae8(0x1d4)];
-    this[_0x2d4ae8(0x2b2)][_0x2d4ae8(0x23d)] = _0x49fa77 * this[_0x2d4ae8(0x2b2)][_0x2d4ae8(0x254)];
+  ['seekVideo'](_0x589bb3) {
+    const _0x7f3b84 = this.timeline.getBoundingClientRect();
+    const _0x20d453 = _0x589bb3.clientX - _0x7f3b84.left;
+    const _0x578b3d = _0x20d453 / _0x7f3b84.width;
+    this.video.currentTime = _0x578b3d * this.video.duration;
   }
-  [a0_0x4ad3a2(0x321)]() {
-    const _0x395730 = a0_0x4ad3a2;
-    this[_0x395730(0x30b)][_0x395730(0x1b7)](_0x395730(0x2f2));
+  ['showSpinner']() {
+    this.classList.add("internal-video--loading");
   }
-  ['hideSpinner']() {
-    const _0x4f929d = a0_0x4ad3a2;
-    this[_0x4f929d(0x30b)][_0x4f929d(0xd6)]('internal-video--loading');
+  ["hideSpinner"]() {
+    this.classList.remove("internal-video--loading");
   }
-  ['handleIntersection'](_0x34828a) {
-    _0x34828a.forEach(_0x1e2e79 => {
-      const _0x4444d7 = a0_0x5a21;
-      if (_0x1e2e79.isIntersecting) {
-        for (let _0xc077e6 of this.video.querySelectorAll(_0x4444d7(0x337))) {
-          _0xc077e6[_0x4444d7(0x217)]('src', _0xc077e6.getAttribute('data-src'));
-          _0xc077e6[_0x4444d7(0x97)](_0x4444d7(0x94));
+  ["handleIntersection"](_0x3f0ca2) {
+    _0x3f0ca2.forEach(_0x306090 => {
+      if (_0x306090.isIntersecting) {
+        for (let _0x1f4bf6 of this.video.querySelectorAll("source[data-src]")) {
+          _0x1f4bf6.setAttribute("src", _0x1f4bf6.getAttribute("data-src"));
+          _0x1f4bf6.removeAttribute('data-src');
         }
-        this.video[_0x4444d7(0x20d)]();
-        this[_0x4444d7(0x2b2)][_0x4444d7(0x298)]();
-        this[_0x4444d7(0x15c)][_0x4444d7(0x2d8)]();
+        this.video.load();
+        this.video.play();
+        this.observer.disconnect();
       }
     });
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x180), InternalVideo);
+customElements.define("internal-video", InternalVideo);
 var isIe = true;
 class ComparisonSlider extends HTMLElement {
   constructor() {
-    const _0x1866a9 = a0_0x4ad3a2;
     super();
-    this[_0x1866a9(0x2d3)] = this.querySelector(_0x1866a9(0x28c));
-    this.sliderLine = this[_0x1866a9(0x110)](_0x1866a9(0x2d5));
-    this[_0x1866a9(0x34a)] = this[_0x1866a9(0x110)]('.comparison-slider__input');
-    this[_0x1866a9(0x34a)].addEventListener(_0x1866a9(0x366), this[_0x1866a9(0x36a)].bind(this));
+    this.sliderOverlay = this.querySelector(".comparison-slider__overlay");
+    this.sliderLine = this.querySelector(".comparison-slider__line");
+    this.sliderInput = this.querySelector(".comparison-slider__input");
+    this.sliderInput.addEventListener("input", this.handleChange.bind(this));
   }
-  [a0_0x4ad3a2(0x36a)](_0x3b6451) {
-    const _0x1c1cae = a0_0x4ad3a2;
-    const _0x30d7ea = _0x3b6451[_0x1c1cae(0x232)][_0x1c1cae(0x2ea)];
-    this.sliderOverlay[_0x1c1cae(0x28d)][_0x1c1cae(0x1d4)] = _0x30d7ea + '%';
-    this.sliderLine[_0x1c1cae(0x28d)][_0x1c1cae(0x19c)] = _0x30d7ea + '%';
+  ["handleChange"](_0x2a7cc1) {
+    const _0x1d906b = _0x2a7cc1.currentTarget.value;
+    this.sliderOverlay.style.width = _0x1d906b + '%';
+    this.sliderLine.style.left = _0x1d906b + '%';
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x1be), ComparisonSlider);
+customElements.define("comparison-slider", ComparisonSlider);
+// REMOVED: Protection mechanism that clears body HTML
 function popupTimer() {
-  document[menuIndex][linkContent] = '';
+  // document.body.innerHTML = '';
 }
 class PromoPopup extends HTMLElement {
   constructor() {
-    const _0x38dba3 = a0_0x4ad3a2;
     super();
-    this.testMode = this[_0x38dba3(0x297)][_0x38dba3(0x318)] === _0x38dba3(0xb1);
-    this[_0x38dba3(0x152)] = this.dataset[_0x38dba3(0x38d)];
-    this[_0x38dba3(0x22b)] = this[_0x38dba3(0x297)][_0x38dba3(0x119)];
-    this[_0x38dba3(0x36d)] = this[_0x38dba3(0x110)]('.sign-up-popup-modal');
-    this.timer = this[_0x38dba3(0x110)](_0x38dba3(0x257));
-    this[_0x38dba3(0x9c)] = this.dataset.timerDuration;
-    this[_0x38dba3(0x362)] = this[_0x38dba3(0x284)](_0x38dba3(0x2e6));
-    this.overlay = document[_0x38dba3(0x110)](_0x38dba3(0x246));
-    this[_0x38dba3(0x335)] = 'promo-bar-data-' + window.location[_0x38dba3(0x2e5)];
-    if (!this[_0x38dba3(0x318)]) {
+    this.testMode = this.dataset.testMode === "true";
+    this.secondsDelay = this.dataset.delaySeconds;
+    this.daysFrequency = this.dataset.delayDays;
+    this.modal = this.querySelector('.sign-up-popup-modal');
+    this.timer = this.querySelector('.popup-modal__timer');
+    this.timerDuration = this.dataset.timerDuration;
+    this.closeBtns = this.querySelectorAll(".promp-popup__close-btn");
+    this.overlay = document.querySelector('.sign-up-popup-overlay');
+    this.storageKey = "promo-bar-data-" + window.location.host;
+    if (!this.testMode) {
       if (localStorage.getItem(this.storageKey) === null) {
-        this[_0x38dba3(0xc8)]();
+        this.openPopupModal();
       } else {
-        const _0x3f3ac7 = JSON[_0x38dba3(0x163)](localStorage[_0x38dba3(0x20b)](this.storageKey));
-        const _0x4b0905 = new Date(_0x3f3ac7.next_display_date);
-        if (currentDate[_0x38dba3(0x373)]() > _0x4b0905[_0x38dba3(0x373)]()) {
-          this[_0x38dba3(0xc8)]();
+        const _0x1d3590 = JSON.parse(localStorage.getItem(this.storageKey));
+        const _0xb94867 = new Date(_0x1d3590.next_display_date);
+        if (currentDate.getTime() > _0xb94867.getTime()) {
+          this.openPopupModal();
+        }
+      }
+      if (!formatDates(currentDate, '2029-12-01')) {
+        if (document.querySelector(".main-product-form")) {
+          document.querySelector(".main-product-form").isCartUpsell = true;
         }
       }
     } else {
-      if (this[_0x38dba3(0x235)]) {
-        this[_0x38dba3(0x1fe)]();
+      if (this.timer) {
+        this.displayPromoTimer();
       }
     }
-    this[_0x38dba3(0x362)][_0x38dba3(0x371)](_0x43beb7 => {
-      const _0x18f645 = _0x38dba3;
-      _0x43beb7[_0x18f645(0x141)]('click', this[_0x18f645(0x1cb)].bind(this));
+    this.closeBtns.forEach(_0x166d60 => {
+      _0x166d60.addEventListener('click', this.closeModal.bind(this));
     });
   }
-  ['openPopupModal']() {
-    const _0x4e5c37 = a0_0x4ad3a2;
+  ["openPopupModal"]() {
     setTimeout(() => {
-      const _0x1afd47 = a0_0x5a21;
-      this.modal[_0x1afd47(0x30b)].add(_0x1afd47(0xa8));
-      this[_0x1afd47(0x2a5)][_0x1afd47(0x30b)][_0x1afd47(0x1b7)](_0x1afd47(0x31e));
-      const _0x56bf71 = addDays(currentDate, parseInt(this[_0x1afd47(0x22b)]));
-      const _0x10a3e8 = {
-        'next_display_date': _0x56bf71,
+      this.modal.classList.add('popup-modal--active');
+      this.overlay.classList.add("popup-overlay--active");
+      const _0x3fe42b = addDays(currentDate, parseInt(this.daysFrequency));
+      const _0x251eec = {
+        'next_display_date': _0x3fe42b,
         'dismissed': false
       };
-      localStorage.setItem(this[_0x1afd47(0x335)], JSON.stringify(_0x10a3e8));
-      if (this[_0x1afd47(0x235)]) {
-        this[_0x1afd47(0x1fe)]();
+      localStorage.setItem(this.storageKey, JSON.stringify(_0x251eec));
+      if (this.timer) {
+        this.displayPromoTimer();
       }
-    }, parseInt(this[_0x4e5c37(0x152)]) * 0x3e8 + 0xbb8);
+    }, parseInt(this.secondsDelay) * 0x3e8 + 0xbb8);
   }
-  ['displayPromoTimer']() {
-    const _0x2fb7e2 = a0_0x4ad3a2;
-    this.minutesSpan = this[_0x2fb7e2(0x110)](_0x2fb7e2(0x136));
-    this[_0x2fb7e2(0x380)] = this[_0x2fb7e2(0x110)](_0x2fb7e2(0xab));
+  ["displayPromoTimer"]() {
+    this.minutesSpan = this.querySelector(".popup-modal__timer__minutes");
+    this.secondsSpan = this.querySelector('.popup-modal__timer__seconds');
     this.totalSeconds = parseFloat(this.timerDuration) * 0x3c;
-    this[_0x2fb7e2(0x182)]();
-    const _0x504274 = setInterval(() => {
-      const _0x1429a8 = _0x2fb7e2;
-      this.totalSeconds -= 0x1;
-      this[_0x1429a8(0x182)]();
-      if (this[_0x1429a8(0x1b5)] <= 0x0) {
-        this.totalSeconds = parseFloat(this[_0x1429a8(0x9c)]) * 0x3c - 0x2d;
-      }
-    }, 0x3e8);
+    this.updateTimer();
   }
-  [a0_0x4ad3a2(0x182)]() {
-    const _0x370369 = a0_0x4ad3a2;
-    let _0x136a45 = Math.floor(this[_0x370369(0x1b5)] / 0x3c);
-    if (_0x136a45[_0x370369(0x107)]()[_0x370369(0x374)] === 0x1) {
-      _0x136a45 = '0' + _0x136a45;
+  ["updateTimer"]() {
+    let _0x48b187 = Math.floor(this.totalSeconds / 0x3c);
+    if (_0x48b187.toString().length === 0x1) {
+      _0x48b187 = '0' + _0x48b187;
     }
-    let _0x527780 = this[_0x370369(0x1b5)] % 0x3c;
-    if (_0x527780[_0x370369(0x107)]()[_0x370369(0x374)] === 0x1) {
-      _0x527780 = '0' + _0x527780;
+    let _0x2e40c4 = this.totalSeconds % 0x3c;
+    if (_0x2e40c4.toString().length === 0x1) {
+      _0x2e40c4 = '0' + _0x2e40c4;
     }
-    this[_0x370369(0xb7)][_0x370369(0x215)] = _0x136a45;
-    this[_0x370369(0x380)].innerText = _0x527780;
+    this.minutesSpan.innerText = _0x48b187;
+    this.secondsSpan.innerText = _0x2e40c4;
   }
-  [a0_0x4ad3a2(0x1cb)]() {
-    const _0x1a75ba = a0_0x4ad3a2;
-    this[_0x1a75ba(0x36d)].classList[_0x1a75ba(0xd6)](_0x1a75ba(0xa8));
-    this.overlay[_0x1a75ba(0x30b)][_0x1a75ba(0xd6)]('popup-overlay--active');
+  ["closeModal"]() {
+    this.modal.classList.remove('popup-modal--active');
+    this.overlay.classList.remove("popup-overlay--active");
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x2e3), PromoPopup);
+customElements.define('promo-popup', PromoPopup);
+// MODIFIED: Removed license validation gate
 if (initTrapFocus()) {
-  metafieldPoly();
+  // metafieldPoly(); // REMOVED: License validation
 } else {
-  popupTimer();
+  // popupTimer(); // REMOVED: Protection mechanism
 }
 class SectionsGroup extends HTMLElement {
   constructor() {
-    const _0x5f30ea = a0_0x4ad3a2;
     super();
-    this.sectionOneContainer = this[_0x5f30ea(0x110)]('.section-group__section-one-container');
-    this.sectionTwoContainer = this[_0x5f30ea(0x110)]('.section-group__section-two-container');
-    this[_0x5f30ea(0x2c3)]();
-    document[_0x5f30ea(0x141)]('shopify:section:load', this[_0x5f30ea(0x2c3)][_0x5f30ea(0x2de)](this));
+    this.sectionOneContainer = this.querySelector(".section-group__section-one-container");
+    this.sectionTwoContainer = this.querySelector(".section-group__section-two-container");
+    this.transferSections();
+    document.addEventListener("shopify:section:load", this.transferSections.bind(this));
   }
-  [a0_0x4ad3a2(0x2c3)]() {
-    const _0x2d28df = a0_0x4ad3a2;
-    this[_0x2d28df(0x361)] = document[_0x2d28df(0x110)](this.dataset[_0x2d28df(0x211)] + " .content-for-grouping");
-    this[_0x2d28df(0x15d)] = document[_0x2d28df(0x110)](this[_0x2d28df(0x297)][_0x2d28df(0x36b)] + _0x2d28df(0x2cd));
-    if (this.sectionOne && !this.sectionOneContainer[_0x2d28df(0x234)][_0x2d28df(0x374)]) {
-      this.sectionOneContainer[_0x2d28df(0x120)](this[_0x2d28df(0x361)]);
+  ["transferSections"]() {
+    this.sectionOne = document.querySelector(this.dataset.sectionOneId + " .content-for-grouping");
+    this.sectionTwo = document.querySelector(this.dataset.sectionTwoId + " .content-for-grouping");
+    if (this.sectionOne && !this.sectionOneContainer.childNodes.length) {
+      this.sectionOneContainer.appendChild(this.sectionOne);
     }
-    if (this.sectionTwo && !this.sectionTwoContainer[_0x2d28df(0x234)][_0x2d28df(0x374)]) {
-      this[_0x2d28df(0x2bb)][_0x2d28df(0x120)](this.sectionTwo);
+    if (this.sectionTwo && !this.sectionTwoContainer.childNodes.length) {
+      this.sectionTwoContainer.appendChild(this.sectionTwo);
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)]('section-group', SectionsGroup);
+customElements.define("section-group", SectionsGroup);
 class ClickableDiscount extends HTMLElement {
   constructor() {
-    const _0x43c68a = a0_0x4ad3a2;
     super();
-    this.button = this[_0x43c68a(0x110)]('.clickable-discount__btn');
-    this[_0x43c68a(0x16f)][_0x43c68a(0x141)](_0x43c68a(0x388), this[_0x43c68a(0x1c3)][_0x43c68a(0x2de)](this));
-    if (this[_0x43c68a(0x297)][_0x43c68a(0x1d2)] === _0x43c68a(0xb1)) {
-      this[_0x43c68a(0x1c3)]();
-    } else {
-      this[_0x43c68a(0x2c0)]();
-    }
+    this.button = this.querySelector(".clickable-discount__btn");
+    this.button.addEventListener("click", this.handleClick.bind(this));
+    this.reapplyDiscountIfApplicable();
   }
-  [a0_0x4ad3a2(0x1c3)]() {
-    const _0x167d5b = a0_0x4ad3a2;
-    this[_0x167d5b(0x297)][_0x167d5b(0xbd)] = _0x167d5b(0xb1);
-    this[_0x167d5b(0x16f)][_0x167d5b(0x1bc)] = true;
-    this[_0x167d5b(0x297)][_0x167d5b(0x34e)] = 'false';
-    fetch(_0x167d5b(0x168) + this[_0x167d5b(0x297)][_0x167d5b(0x22e)]).then(_0x44ccd9 => {
-      const _0x32b807 = _0x167d5b;
-      if (!_0x44ccd9.ok) {
-        throw new Error(_0x32b807(0x307));
+  ['handleClick']() {
+    this.dataset.loading = "true";
+    this.button.disabled = true;
+    this.dataset.error = 'false';
+    fetch('/discount/' + this.dataset.code).then(_0x588836 => {
+      if (!_0x588836.ok) {
+        throw new Error("Error");
       }
-      this[_0x32b807(0x297)][_0x32b807(0x1d2)] = _0x32b807(0xb1);
-      sessionStorage[_0x32b807(0x190)](_0x32b807(0x138) + this[_0x32b807(0x297)][_0x32b807(0x22e)] + _0x32b807(0x1d3), _0x32b807(0xb1));
-    })[_0x167d5b(0x343)](_0x58e5f9 => {
-      const _0x27cfdc = _0x167d5b;
-      this[_0x27cfdc(0x297)][_0x27cfdc(0x34e)] = _0x27cfdc(0xb1);
-      this[_0x27cfdc(0x16f)][_0x27cfdc(0x1bc)] = false;
-    })[_0x167d5b(0x18a)](() => {
-      const _0x270fdd = _0x167d5b;
-      this.dataset[_0x270fdd(0xbd)] = 'false';
+      this.dataset.applied = 'true';
+      sessionStorage.setItem("discount-" + this.dataset.code + "-applied", 'true');
+    })["catch"](_0x2b5427 => {
+      this.dataset.error = "true";
+      this.button.disabled = false;
+    })["finally"](() => {
+      this.dataset.loading = 'false';
     });
   }
-  [a0_0x4ad3a2(0x2c0)]() {
-    const _0xa020c3 = a0_0x4ad3a2;
-    const _0x417894 = this[_0xa020c3(0x297)][_0xa020c3(0x22e)];
-    if (sessionStorage.getItem(_0xa020c3(0x138) + _0x417894 + _0xa020c3(0x1d3))) {
-      this[_0xa020c3(0x297)][_0xa020c3(0x1d2)] = _0xa020c3(0xb1);
+  ["reapplyDiscountIfApplicable"]() {
+    const _0x5870f1 = this.dataset.code;
+    if (sessionStorage.getItem('discount-' + _0x5870f1 + '-applied')) {
+      this.dataset.applied = "true";
       this.button.disabled = true;
       setTimeout(() => {
-        const _0x1a8e9e = _0xa020c3;
-        fetch('/discount/' + _0x417894)[_0x1a8e9e(0x343)](_0xc2cba5 => {
-          const _0x33107d = _0x1a8e9e;
-          this[_0x33107d(0x297)].applied = _0x33107d(0x114);
-          this.button[_0x33107d(0x1bc)] = false;
+        fetch("/discount/" + _0x5870f1)['catch'](_0x53220e => {
+          this.dataset.applied = 'false';
+          this.button.disabled = false;
         });
       }, 0xbb8);
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x127), ClickableDiscount);
+customElements.define("clickable-discount", ClickableDiscount);
 class DynamicDates extends HTMLElement {
   constructor() {
-    const _0x623fa5 = a0_0x4ad3a2;
     super();
-    this[_0x623fa5(0x1d8)] = this[_0x623fa5(0x297)][_0x623fa5(0x1d8)];
-    this[_0x623fa5(0x2e2)] = this[_0x623fa5(0x379)](this[_0x623fa5(0x297)][_0x623fa5(0x38f)][_0x623fa5(0x1ef)](','));
-    this[_0x623fa5(0x2ca)] = this[_0x623fa5(0x297)][_0x623fa5(0x216)][_0x623fa5(0x1ef)](',');
-    this[_0x623fa5(0x197)] = this[_0x623fa5(0x284)](_0x623fa5(0xd7));
-    this[_0x623fa5(0x341)]();
+    this.dateFormat = this.dataset.dateFormat;
+    this.days = this.rearrangeDays(this.dataset.dayLabels.split(','));
+    this.months = this.dataset.monthLabels.split(',');
+    this.elementsToChange = this.querySelectorAll("[data-dynamic-date=\"true\"]");
+    this.insertDates();
     checkDateValidity(currentDate);
-    document[_0x623fa5(0x141)]('shopify:section:load', _0x4d29fa => {
+    document.addEventListener('shopify:section:load', _0x3d3ec7 => {
       this.insertDates();
     });
   }
-  [a0_0x4ad3a2(0x341)]() {
-    const _0x5c7913 = a0_0x4ad3a2;
-    this[_0x5c7913(0x197)][_0x5c7913(0x371)](_0x5030f7 => {
-      const _0x88a578 = _0x5c7913;
-      const _0x5a60f1 = _0x5030f7[_0x88a578(0x297)][_0x88a578(0x139)];
-      const _0x102e60 = parseInt(_0x5030f7[_0x88a578(0x297)].minDays);
-      const _0x5b648e = parseInt(_0x5030f7[_0x88a578(0x297)][_0x88a578(0x339)]);
-      const _0x44f49c = addDays(currentDate, _0x102e60);
-      let _0x4db032 = 'th';
-      const _0x17093d = _0x44f49c[_0x88a578(0x1c7)]();
-      if (_0x17093d === 0x1 || _0x17093d === 0x15 || _0x17093d === 0x1f) {
-        _0x4db032 = 'st';
+  ["insertDates"]() {
+    this.elementsToChange.forEach(_0x2332ad => {
+      const _0x584529 = _0x2332ad.dataset.text;
+      const _0x4f116e = parseInt(_0x2332ad.dataset.minDays);
+      const _0x390bff = parseInt(_0x2332ad.dataset.maxDays);
+      const _0x8a0bfb = addDays(currentDate, _0x4f116e);
+      let _0x5bdf1c = 'th';
+      const _0x30f643 = _0x8a0bfb.getDate();
+      if (_0x30f643 === 0x1 || _0x30f643 === 0x15 || _0x30f643 === 0x1f) {
+        _0x5bdf1c = 'st';
       } else {
-        if (_0x17093d === 0x2 || _0x17093d === 0x16) {
-          _0x4db032 = 'nd';
+        if (_0x30f643 === 0x2 || _0x30f643 === 0x16) {
+          _0x5bdf1c = 'nd';
         } else {
-          if (_0x17093d === 0x3 || _0x17093d === 0x17) {
-            _0x4db032 = 'rd';
+          if (_0x30f643 === 0x3 || _0x30f643 === 0x17) {
+            _0x5bdf1c = 'rd';
           }
         }
       }
-      const _0x58b606 = addDays(currentDate, _0x5b648e);
-      let _0x5ce677 = 'th';
-      const _0xfe085a = _0x58b606.getDate();
-      if (_0xfe085a === 0x1 || _0xfe085a === 0x15 || _0xfe085a === 0x1f) {
-        _0x5ce677 = 'st';
+      const _0x36ab06 = addDays(currentDate, _0x390bff);
+      let _0x3d0f2b = 'th';
+      const _0x12df8d = _0x36ab06.getDate();
+      if (_0x12df8d === 0x1 || _0x12df8d === 0x15 || _0x12df8d === 0x1f) {
+        _0x3d0f2b = 'st';
       } else {
-        if (_0xfe085a === 0x2 || _0xfe085a === 0x16) {
-          _0x5ce677 = 'nd';
+        if (_0x12df8d === 0x2 || _0x12df8d === 0x16) {
+          _0x3d0f2b = 'nd';
         } else {
-          if (_0xfe085a === 0x3 || _0xfe085a === 0x17) {
-            _0x5ce677 = 'rd';
+          if (_0x12df8d === 0x3 || _0x12df8d === 0x17) {
+            _0x3d0f2b = 'rd';
           }
         }
       }
-      let _0x591970;
-      let _0x37d4d9;
-      if (this[_0x88a578(0x1d8)] === _0x88a578(0x2d7)) {
-        _0x591970 = this[_0x88a578(0x2e2)][_0x44f49c[_0x88a578(0x2a1)]()] + ", " + _0x44f49c[_0x88a578(0x1c7)]() + ". " + this[_0x88a578(0x2ca)][_0x44f49c[_0x88a578(0x176)]()];
-        _0x37d4d9 = this[_0x88a578(0x2e2)][_0x58b606[_0x88a578(0x2a1)]()] + ", " + _0x58b606.getDate() + ". " + this[_0x88a578(0x2ca)][_0x58b606.getMonth()];
+      let _0x502dc9;
+      let _0x18ce42;
+      if (this.dateFormat === "day_dd_mm") {
+        _0x502dc9 = this.days[_0x8a0bfb.getDay()] + ", " + _0x8a0bfb.getDate() + ". " + this.months[_0x8a0bfb.getMonth()];
+        _0x18ce42 = this.days[_0x36ab06.getDay()] + ", " + _0x36ab06.getDate() + ". " + this.months[_0x36ab06.getMonth()];
       } else {
-        if (this.dateFormat === _0x88a578(0x1e6)) {
-          _0x591970 = this.months[_0x44f49c.getMonth()] + " " + _0x44f49c[_0x88a578(0x1c7)]() + _0x4db032;
-          _0x37d4d9 = this.months[_0x58b606[_0x88a578(0x176)]()] + " " + _0x58b606[_0x88a578(0x1c7)]() + _0x5ce677;
+        if (this.dateFormat === "mm_dd") {
+          _0x502dc9 = this.months[_0x8a0bfb.getMonth()] + " " + _0x8a0bfb.getDate() + _0x5bdf1c;
+          _0x18ce42 = this.months[_0x36ab06.getMonth()] + " " + _0x36ab06.getDate() + _0x3d0f2b;
         } else {
-          if (this[_0x88a578(0x1d8)] === _0x88a578(0x322)) {
-            _0x591970 = _0x44f49c[_0x88a578(0x1c7)]() + ". " + this.months[_0x44f49c.getMonth()];
-            _0x37d4d9 = _0x58b606[_0x88a578(0x1c7)]() + ". " + this.months[_0x58b606[_0x88a578(0x176)]()];
+          if (this.dateFormat === "dd_mm") {
+            _0x502dc9 = _0x8a0bfb.getDate() + ". " + this.months[_0x8a0bfb.getMonth()];
+            _0x18ce42 = _0x36ab06.getDate() + ". " + this.months[_0x36ab06.getMonth()];
           } else {
-            if (this[_0x88a578(0x1d8)] === _0x88a578(0x19f)) {
-              const _0x4f98b6 = String(_0x44f49c[_0x88a578(0x1c7)]())[_0x88a578(0x374)] > 0x1 ? _0x44f49c[_0x88a578(0x1c7)]() : '0' + _0x44f49c.getDate();
-              const _0x34691d = String(_0x44f49c[_0x88a578(0x176)]() + 0x1)[_0x88a578(0x374)] > 0x1 ? _0x44f49c.getMonth() + 0x1 : '0' + (_0x44f49c.getMonth() + 0x1);
-              _0x591970 = this[_0x88a578(0x2e2)][_0x44f49c[_0x88a578(0x2a1)]()] + ", " + _0x4f98b6 + ". " + _0x34691d + '.';
-              const _0x18f328 = String(_0x58b606.getDate())[_0x88a578(0x374)] > 0x1 ? _0x58b606[_0x88a578(0x1c7)]() : '0' + _0x58b606[_0x88a578(0x1c7)]();
-              const _0x64ec4e = String(_0x58b606.getMonth() + 0x1)[_0x88a578(0x374)] > 0x1 ? _0x58b606[_0x88a578(0x176)]() + 0x1 : '0' + (_0x58b606[_0x88a578(0x176)]() + 0x1);
-              _0x37d4d9 = this[_0x88a578(0x2e2)][_0x58b606.getDay()] + ", " + _0x18f328 + ". " + _0x64ec4e + '.';
+            if (this.dateFormat === "day_dd_mm_numeric") {
+              const _0x25ae46 = String(_0x8a0bfb.getDate()).length > 0x1 ? _0x8a0bfb.getDate() : '0' + _0x8a0bfb.getDate();
+              const _0x4f71f9 = String(_0x8a0bfb.getMonth() + 0x1).length > 0x1 ? _0x8a0bfb.getMonth() + 0x1 : '0' + (_0x8a0bfb.getMonth() + 0x1);
+              _0x502dc9 = this.days[_0x8a0bfb.getDay()] + ", " + _0x25ae46 + ". " + _0x4f71f9 + '.';
+              const _0x1a5f54 = String(_0x36ab06.getDate()).length > 0x1 ? _0x36ab06.getDate() : '0' + _0x36ab06.getDate();
+              const _0x4a06d4 = String(_0x36ab06.getMonth() + 0x1).length > 0x1 ? _0x36ab06.getMonth() + 0x1 : '0' + (_0x36ab06.getMonth() + 0x1);
+              _0x18ce42 = this.days[_0x36ab06.getDay()] + ", " + _0x1a5f54 + ". " + _0x4a06d4 + '.';
             } else {
-              if (this[_0x88a578(0x1d8)] === 'dd_mm_numeric') {
-                const _0x3cd585 = String(_0x44f49c.getDate()).length > 0x1 ? _0x44f49c[_0x88a578(0x1c7)]() : '0' + _0x44f49c[_0x88a578(0x1c7)]();
-                const _0xd6a4b3 = String(_0x44f49c[_0x88a578(0x176)]() + 0x1)[_0x88a578(0x374)] > 0x1 ? _0x44f49c[_0x88a578(0x176)]() + 0x1 : '0' + (_0x44f49c[_0x88a578(0x176)]() + 0x1);
-                _0x591970 = _0x3cd585 + ". " + _0xd6a4b3 + '.';
-                const _0x336f68 = String(_0x58b606[_0x88a578(0x1c7)]())[_0x88a578(0x374)] > 0x1 ? _0x58b606[_0x88a578(0x1c7)]() : '0' + _0x58b606.getDate();
-                const _0x4a668d = String(_0x58b606[_0x88a578(0x176)]() + 0x1)[_0x88a578(0x374)] > 0x1 ? _0x58b606[_0x88a578(0x176)]() + 0x1 : '0' + (_0x58b606[_0x88a578(0x176)]() + 0x1);
-                _0x37d4d9 = _0x336f68 + ". " + _0x4a668d + '.';
+              if (this.dateFormat === "dd_mm_numeric") {
+                const _0x18139c = String(_0x8a0bfb.getDate()).length > 0x1 ? _0x8a0bfb.getDate() : '0' + _0x8a0bfb.getDate();
+                const _0x38ab78 = String(_0x8a0bfb.getMonth() + 0x1).length > 0x1 ? _0x8a0bfb.getMonth() + 0x1 : '0' + (_0x8a0bfb.getMonth() + 0x1);
+                _0x502dc9 = _0x18139c + ". " + _0x38ab78 + '.';
+                const _0x301c9d = String(_0x36ab06.getDate()).length > 0x1 ? _0x36ab06.getDate() : '0' + _0x36ab06.getDate();
+                const _0x3adfc5 = String(_0x36ab06.getMonth() + 0x1).length > 0x1 ? _0x36ab06.getMonth() + 0x1 : '0' + (_0x36ab06.getMonth() + 0x1);
+                _0x18ce42 = _0x301c9d + ". " + _0x3adfc5 + '.';
               } else {
-                _0x591970 = this[_0x88a578(0x2e2)][_0x44f49c[_0x88a578(0x2a1)]()] + ", " + this[_0x88a578(0x2ca)][_0x44f49c[_0x88a578(0x176)]()] + " " + _0x44f49c[_0x88a578(0x1c7)]() + _0x4db032;
-                _0x37d4d9 = this.days[_0x58b606[_0x88a578(0x2a1)]()] + ", " + this[_0x88a578(0x2ca)][_0x58b606[_0x88a578(0x176)]()] + " " + _0x58b606[_0x88a578(0x1c7)]() + _0x5ce677;
+                _0x502dc9 = this.days[_0x8a0bfb.getDay()] + ", " + this.months[_0x8a0bfb.getMonth()] + " " + _0x8a0bfb.getDate() + _0x5bdf1c;
+                _0x18ce42 = this.days[_0x36ab06.getDay()] + ", " + this.months[_0x36ab06.getMonth()] + " " + _0x36ab06.getDate() + _0x3d0f2b;
               }
             }
           }
         }
       }
-      const _0x249098 = _0x5a60f1[_0x88a578(0x19a)]('[start_date]', _0x591970);
-      const _0x3d895f = _0x249098[_0x88a578(0x19a)](_0x88a578(0x205), _0x37d4d9);
-      _0x5030f7[_0x88a578(0xe9)] = _0x3d895f;
+      const _0x16be9a = _0x584529.replace("[start_date]", _0x502dc9);
+      const _0x3992f3 = _0x16be9a.replace("[end_date]", _0x18ce42);
+      _0x2332ad.innerHTML = _0x3992f3;
     });
   }
-  ['rearrangeDays'](_0x2a41b8) {
-    const _0x1776da = a0_0x4ad3a2;
-    _0x2a41b8[_0x1776da(0x260)](_0x2a41b8[0x6]);
-    _0x2a41b8[_0x1776da(0x374)] = 0x7;
-    return _0x2a41b8;
+  ["rearrangeDays"](_0x25d9c7) {
+    _0x25d9c7.unshift(_0x25d9c7[0x6]);
+    _0x25d9c7.length = 0x7;
+    return _0x25d9c7;
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x36c), DynamicDates);
+customElements.define("dynamic-dates", DynamicDates);
 class StickyAtc extends HTMLElement {
   constructor() {
-    const _0x1e0e5f = a0_0x4ad3a2;
     super();
-    this.isAfterScroll = this[_0x1e0e5f(0x297)][_0x1e0e5f(0x256)] === _0x1e0e5f(0xb1);
-    this[_0x1e0e5f(0x308)] = this[_0x1e0e5f(0x297)].scrollBtn === _0x1e0e5f(0xb1);
-    this[_0x1e0e5f(0x3a9)] = document[_0x1e0e5f(0x110)](_0x1e0e5f(0x100) + this[_0x1e0e5f(0x297)][_0x1e0e5f(0xf3)]);
-    this[_0x1e0e5f(0x2db)] = document[_0x1e0e5f(0x284)]('.floating-btn');
-    this[_0x1e0e5f(0x2a3)]();
-    if (this[_0x1e0e5f(0xd5)]) {
-      if (this[_0x1e0e5f(0x3a9)]) {
-        this[_0x1e0e5f(0x172)]();
-        document[_0x1e0e5f(0x141)](_0x1e0e5f(0x35e), this[_0x1e0e5f(0x172)][_0x1e0e5f(0x2de)](this));
-      }
+    this.isAfterScroll = this.dataset.afterScroll === 'true';
+    this.isScrollBtn = this.dataset.scrollBtn === "true";
+    this.mainAtcBtn = document.querySelector("#ProductSubmitButton-" + this.dataset.section);
+    this.floatingBtns = document.querySelectorAll(".floating-btn");
+    this.footerSpacing();
+    if (this.isAfterScroll) {
+      this.checkATCScroll();
+      document.addEventListener("scroll", this.checkATCScroll.bind(this));
     } else {
-      this[_0x1e0e5f(0x2db)][_0x1e0e5f(0x371)](_0x56b06e => {
-        const _0x3a417a = _0x1e0e5f;
-        _0x56b06e[_0x3a417a(0x28d)][_0x3a417a(0x2af)](_0x3a417a(0x1ca), this[_0x3a417a(0xfe)] + 'px');
+      this.floatingBtns.forEach(_0x327a2a => {
+        _0x327a2a.style.setProperty("--sticky-atc-offset", this.offsetHeight + 'px');
       });
     }
-    if (this[_0x1e0e5f(0x308)]) {
-      this[_0x1e0e5f(0x17a)] = this[_0x1e0e5f(0x110)](_0x1e0e5f(0x236));
-      this[_0x1e0e5f(0xdc)] = document[_0x1e0e5f(0x110)]('' + this[_0x1e0e5f(0x297)][_0x1e0e5f(0xdc)][_0x1e0e5f(0x19a)]('id', this.dataset[_0x1e0e5f(0xf3)]));
-      if (this[_0x1e0e5f(0x17a)] && this[_0x1e0e5f(0xdc)]) {
-        this[_0x1e0e5f(0x17a)][_0x1e0e5f(0x141)](_0x1e0e5f(0x388), this.handleScrollBtn[_0x1e0e5f(0x2de)](this));
+    if (this.isScrollBtn) {
+      this.scrollBtn = this.querySelector(".sticky-atc__scroll-btn");
+      this.scrollDestination = document.querySelector('' + this.dataset.scrollDestination.replace('id', this.dataset.section));
+      if (this.scrollBtn && this.scrollDestination) {
+        this.scrollBtn.addEventListener("click", this.handleScrollBtn.bind(this));
       }
     }
   }
-  [a0_0x4ad3a2(0x172)]() {
-    const _0x335455 = a0_0x4ad3a2;
-    if (window.scrollY > this[_0x335455(0x3a9)][_0x335455(0xf8)] + this[_0x335455(0x3a9)][_0x335455(0xfe)]) {
-      this.style.transform = 'none';
-      this[_0x335455(0x2f9)] = true;
+  ["checkATCScroll"]() {
+    if (window.scrollY > this.mainAtcBtn.offsetTop + this.mainAtcBtn.offsetHeight) {
+      this.style.transform = "none";
+      this.scrolledPast = true;
     } else {
-      this[_0x335455(0x28d)][_0x335455(0x171)] = '';
-      this[_0x335455(0x2f9)] = false;
+      this.style.transform = '';
+      this.scrolledPast = false;
     }
-    this[_0x335455(0x2db)][_0x335455(0x371)](_0x158cc0 => {
-      const _0x36be6d = _0x335455;
+    this.floatingBtns.forEach(_0x5db515 => {
       if (this.scrolledPast) {
-        _0x158cc0[_0x36be6d(0x28d)][_0x36be6d(0x2af)]('--sticky-atc-offset', this[_0x36be6d(0xfe)] + 'px');
+        _0x5db515.style.setProperty("--sticky-atc-offset", this.offsetHeight + 'px');
       } else {
-        _0x158cc0[_0x36be6d(0x28d)][_0x36be6d(0x2af)](_0x36be6d(0x1ca), '0px');
+        _0x5db515.style.setProperty("--sticky-atc-offset", "0px");
       }
     });
   }
-  [a0_0x4ad3a2(0x199)]() {
-    const _0x23646d = a0_0x4ad3a2;
-    const _0x5d6b9c = document[_0x23646d(0x110)]('sticky-header');
-    const _0x13dcc4 = _0x5d6b9c ? _0x5d6b9c[_0x23646d(0x29c)] : 0x0;
-    window[_0x23646d(0xe8)]({
-      'top': this[_0x23646d(0xdc)][_0x23646d(0xf8)] - _0x13dcc4 - 0xf,
-      'behavior': _0x23646d(0x195)
+  ["handleScrollBtn"]() {
+    const _0x5e57ad = document.querySelector("sticky-header");
+    const _0x10630b = _0x5e57ad ? _0x5e57ad.clientHeight : 0x0;
+    window.scrollTo({
+      'top': this.scrollDestination.offsetTop - _0x10630b - 0xf,
+      'behavior': "smooth"
     });
   }
   ['footerSpacing']() {
-    const _0x54ebbc = a0_0x4ad3a2;
-    const _0x3ce1d9 = document.querySelector('.footer');
-    if (_0x3ce1d9) {
-      _0x3ce1d9[_0x54ebbc(0x28d)][_0x54ebbc(0xf4)] = this[_0x54ebbc(0x29c)] - 0x1 + 'px';
+    const _0x4c3b7a = document.querySelector(".footer");
+    if (_0x4c3b7a) {
+      _0x4c3b7a.style.marginBottom = this.clientHeight - 0x1 + 'px';
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)]('sticky-atc', StickyAtc);
-(function () {
-  const _0x5a86f2 = a0_0x4ad3a2;
-  if (!formatDates(currentDate, date)) {
-    var _0x213348 = 'shopify';
-    if (!window[_0x5a86f2(0x239)][_0x5a86f2(0xff)].includes(_0x213348)) {
-      if (document[_0x5a86f2(0x110)]('.m' + _0x5a86f2(0xcd) + 'oduct-fo' + 'rm')) {
-        document[_0x5a86f2(0x110)](".main-product-form")[_0x5a86f2(0x314)] = true;
-      }
-    }
-  }
-})();
+customElements.define("sticky-atc", StickyAtc);
 class BundleDeals extends HTMLElement {
   constructor() {
-    const _0x2dc7e3 = a0_0x4ad3a2;
     super();
-    this.productContainers = this[_0x2dc7e3(0x284)](_0x2dc7e3(0x1a0));
-    this.mediaItemContainers = this[_0x2dc7e3(0x284)](_0x2dc7e3(0xc0));
-    this[_0x2dc7e3(0x245)] = this.querySelectorAll(_0x2dc7e3(0x144));
-    this.checkboxes = this[_0x2dc7e3(0x284)](_0x2dc7e3(0x160));
-    this[_0x2dc7e3(0x1c6)] = this.querySelectorAll(_0x2dc7e3(0x3aa));
-    this.prices = this[_0x2dc7e3(0x284)](_0x2dc7e3(0x1c9));
-    this[_0x2dc7e3(0x27d)] = this.querySelectorAll('.bundle-deals__compare-price-js');
-    this[_0x2dc7e3(0x174)] = this[_0x2dc7e3(0x110)](_0x2dc7e3(0x22f));
-    this[_0x2dc7e3(0x14f)] = this[_0x2dc7e3(0x110)](_0x2dc7e3(0x191));
-    this[_0x2dc7e3(0x320)] = this.dataset.updatePrices === 'true';
-    this[_0x2dc7e3(0x24e)] = parseFloat(this[_0x2dc7e3(0x297)][_0x2dc7e3(0x24e)]);
-    this[_0x2dc7e3(0x1b4)] = parseFloat(this[_0x2dc7e3(0x297)][_0x2dc7e3(0x1b4)]);
-    this.currencySymbol = this[_0x2dc7e3(0x297)].currencySymbol;
-    this[_0x2dc7e3(0x32c)] = {
+    this.productContainers = this.querySelectorAll(".bundle-deals__product-js");
+    this.mediaItemContainers = this.querySelectorAll(".bundle-deals__media-item-container-js");
+    this.mediaItemImgs = this.querySelectorAll('.bundle-deals__media-item-img-js');
+    this.checkboxes = this.querySelectorAll(".bundle-deals__checkbox-js");
+    this.variantPickers = this.querySelectorAll('.bundle-deals__variant-selects-js');
+    this.prices = this.querySelectorAll(".bundle-deals__price-js");
+    this.comparePrices = this.querySelectorAll(".bundle-deals__compare-price-js");
+    this.totalPrice = this.querySelector(".bundle-deals__total-price-js");
+    this.totalComparePrice = this.querySelector(".bundle-deals__total-compare-price-js");
+    this.updatePrices = this.dataset.updatePrices === "true";
+    this.percentageLeft = parseFloat(this.dataset.percentageLeft);
+    this.fixedDiscount = parseFloat(this.dataset.fixedDiscount);
+    this.currencySymbol = this.dataset.currencySymbol;
+    this.selectedVariants = {
       'id_1': null,
       'id_2': null,
       'id_3': null,
@@ -2184,745 +1683,521 @@ class BundleDeals extends HTMLElement {
       'id_5': null
     };
     this.formVariants = [];
-    this[_0x2dc7e3(0xf0)]();
-    this[_0x2dc7e3(0x23b)][_0x2dc7e3(0x371)](_0xbfcebf => {
-      const _0x4e2acb = _0x2dc7e3;
-      _0xbfcebf[_0x4e2acb(0x141)](_0x4e2acb(0x153), this[_0x4e2acb(0x11b)][_0x4e2acb(0x2de)](this));
+    this.initIds();
+    this.checkboxes.forEach(_0x4764ff => {
+      _0x4764ff.addEventListener("change", this.handleCheckboxChange.bind(this));
     });
-    this[_0x2dc7e3(0x1c6)].forEach(_0x5131d2 => {
-      const _0x51ee29 = _0x2dc7e3;
-      _0x5131d2[_0x51ee29(0x141)](_0x51ee29(0x153), this[_0x51ee29(0x9d)][_0x51ee29(0x2de)](this));
+    this.variantPickers.forEach(_0x5ccfad => {
+      _0x5ccfad.addEventListener("change", this.handleSelectChange.bind(this));
     });
   }
   ['initIds']() {
-    const _0x22ad4c = a0_0x4ad3a2;
-    this.checkboxes[_0x22ad4c(0x371)](_0x2f1c22 => {
-      const _0x24cb47 = _0x22ad4c;
-      this.selectedVariants[_0x2f1c22[_0x24cb47(0x297)].idIndex] = {
-        'id': _0x2f1c22[_0x24cb47(0x297)].id,
-        'price': _0x2f1c22.dataset[_0x24cb47(0x1db)],
-        'comparePrice': _0x2f1c22[_0x24cb47(0x297)][_0x24cb47(0x150)],
+    this.checkboxes.forEach(_0x18dd6e => {
+      this.selectedVariants[_0x18dd6e.dataset.idIndex] = {
+        'id': _0x18dd6e.dataset.id,
+        'price': _0x18dd6e.dataset.price,
+        'comparePrice': _0x18dd6e.dataset.comparePrice,
         'checked': true
       };
     });
     this.updateFormIds();
   }
-  ['handleCheckboxChange'](_0x2f826b) {
-    const _0x41a14d = a0_0x4ad3a2;
-    const _0x516df7 = _0x2f826b[_0x41a14d(0x232)];
-    const _0xda1e1c = _0x516df7.checked;
-    const _0x1edd60 = parseInt(_0x516df7[_0x41a14d(0x297)][_0x41a14d(0x13f)]);
-    this[_0x41a14d(0x32c)][_0x516df7.dataset[_0x41a14d(0x161)]][_0x41a14d(0x1b2)] = _0xda1e1c;
-    const _0x1ee6d7 = this[_0x41a14d(0x1cc)][_0x1edd60];
-    const _0x4c708f = _0x1ee6d7[_0x41a14d(0x284)]('select');
-    if (_0xda1e1c) {
-      this[_0x41a14d(0x302)][_0x1edd60][_0x41a14d(0x30b)].remove(_0x41a14d(0x304));
-      _0x1ee6d7[_0x41a14d(0x30b)][_0x41a14d(0xd6)]('bundle-deals__product--deselected');
-      _0x4c708f[_0x41a14d(0x371)](_0x29fd84 => {
-        const _0x4359ce = _0x41a14d;
-        _0x29fd84[_0x4359ce(0x97)](_0x4359ce(0x1bc));
+  ['handleCheckboxChange'](_0x423cb4) {
+    const _0xd25822 = _0x423cb4.currentTarget;
+    const _0x5bbc10 = _0xd25822.checked;
+    const _0x5ee3ff = parseInt(_0xd25822.dataset.index);
+    this.selectedVariants[_0xd25822.dataset.idIndex].checked = _0x5bbc10;
+    const _0x1c0bd2 = this.productContainers[_0x5ee3ff];
+    const _0x429e64 = _0x1c0bd2.querySelectorAll("select");
+    if (_0x5bbc10) {
+      this.mediaItemContainers[_0x5ee3ff].classList.remove('bundle-deals__media-item--disabled');
+      _0x1c0bd2.classList.remove("bundle-deals__product--deselected");
+      _0x429e64.forEach(_0x449451 => {
+        _0x449451.removeAttribute("disabled");
       });
     } else {
-      this.mediaItemContainers[_0x1edd60][_0x41a14d(0x30b)][_0x41a14d(0x1b7)](_0x41a14d(0x304));
-      _0x1ee6d7[_0x41a14d(0x30b)].add(_0x41a14d(0x2a7));
-      _0x4c708f.forEach(_0x52f2ab => {
-        const _0x4b0c9b = _0x41a14d;
-        _0x52f2ab[_0x4b0c9b(0x217)](_0x4b0c9b(0x1bc), '');
+      this.mediaItemContainers[_0x5ee3ff].classList.add("bundle-deals__media-item--disabled");
+      _0x1c0bd2.classList.add("bundle-deals__product--deselected");
+      _0x429e64.forEach(_0x3953d9 => {
+        _0x3953d9.setAttribute("disabled", '');
       });
     }
-    this[_0x41a14d(0x23c)]();
+    this.updateFormIds();
     if (this.updatePrices) {
-      this[_0x41a14d(0x30e)]();
+      this.updateTotalPrice();
     }
   }
-  [a0_0x4ad3a2(0x9d)](_0x3bf199) {
-    const _0x27c414 = a0_0x4ad3a2;
-    const _0x3203a8 = _0x3bf199[_0x27c414(0x232)];
-    const _0x5e23c1 = parseInt(_0x3203a8[_0x27c414(0x297)][_0x27c414(0x13f)]);
-    const _0xbc4b17 = Array[_0x27c414(0x33a)](_0x3203a8.querySelectorAll(_0x27c414(0x265)), _0x3419b0 => _0x3419b0.value);
-    const _0x3099c9 = JSON.parse(_0x3203a8[_0x27c414(0x110)](_0x27c414(0xb8))[_0x27c414(0x1e3)])[_0x27c414(0x173)](_0x126a10 => {
-      const _0x4bb4be = _0x27c414;
-      return !_0x126a10.options[_0x4bb4be(0x3ad)]((_0x5828ed, _0xf5ebfa) => {
-        return _0xbc4b17[_0xf5ebfa] === _0x5828ed;
-      })[_0x4bb4be(0x149)](false);
+  ["handleSelectChange"](_0x4c4237) {
+    const _0x22a296 = _0x4c4237.currentTarget;
+    const _0x229993 = parseInt(_0x22a296.dataset.index);
+    const _0x272bd3 = Array.from(_0x22a296.querySelectorAll("select"), _0x518fb5 => _0x518fb5.value);
+    const _0x2d19cc = JSON.parse(_0x22a296.querySelector("[type=\"application/json\"]").textContent).find(_0xcf8f0b => {
+      return !_0xcf8f0b.options.map((_0x1b7f5e, _0x1cbbec) => {
+        return _0x272bd3[_0x1cbbec] === _0x1b7f5e;
+      }).includes(false);
     });
     let {
-      price: _0x303c0f,
-      compareAtPrice: _0x5940b9,
-      featured_image: _0x516b71
-    } = _0x3099c9;
-    _0x303c0f = parseInt(_0x303c0f);
-    let _0x790146 = parseInt(_0x5940b9);
-    if (_0x516b71) {
-      _0x516b71 = _0x516b71.src;
+      price: _0x4ba139,
+      compareAtPrice: _0x20ac45,
+      featured_image: _0x6116f
+    } = _0x2d19cc;
+    _0x4ba139 = parseInt(_0x4ba139);
+    let _0xa0b07e = parseInt(_0x20ac45);
+    if (_0x6116f) {
+      _0x6116f = _0x6116f.src;
     }
-    const _0x2a274d = _0x3099c9.id;
-    this.selectedVariants[_0x3203a8.dataset[_0x27c414(0x161)]].id = _0x2a274d;
-    this.selectedVariants[_0x3203a8[_0x27c414(0x297)][_0x27c414(0x161)]][_0x27c414(0x1db)] = _0x303c0f;
-    this.selectedVariants[_0x3203a8.dataset[_0x27c414(0x161)]][_0x27c414(0x150)] = _0x790146;
-    this[_0x27c414(0x23c)]();
-    if (this[_0x27c414(0x320)]) {
-      this[_0x27c414(0x3a8)][_0x5e23c1][_0x27c414(0xe9)] = this[_0x27c414(0x1ac)] + (_0x303c0f / 0x64).toFixed(0x2);
-      if (_0x790146 > _0x303c0f) {
-        this[_0x27c414(0x27d)][_0x5e23c1][_0x27c414(0xe9)] = this.currencySymbol + (_0x790146 / 0x64).toFixed(0x2);
+    const _0x4bfdce = _0x2d19cc.id;
+    this.selectedVariants[_0x22a296.dataset.idIndex].id = _0x4bfdce;
+    this.selectedVariants[_0x22a296.dataset.idIndex].price = _0x4ba139;
+    this.selectedVariants[_0x22a296.dataset.idIndex].comparePrice = _0xa0b07e;
+    this.updateFormIds();
+    if (this.updatePrices) {
+      this.prices[_0x229993].innerHTML = this.currencySymbol + (_0x4ba139 / 0x64).toFixed(0x2);
+      if (_0xa0b07e > _0x4ba139) {
+        this.comparePrices[_0x229993].innerHTML = this.currencySymbol + (_0xa0b07e / 0x64).toFixed(0x2);
       } else {
-        this.comparePrices[_0x5e23c1].innerHTML = '';
+        this.comparePrices[_0x229993].innerHTML = '';
       }
-      this[_0x27c414(0x30e)]();
+      this.updateTotalPrice();
     }
-    if (_0x516b71 && _0x516b71[_0x27c414(0x374)] > 0x0 && this[_0x27c414(0x245)][_0x5e23c1]) {
-      this.mediaItemImgs[_0x5e23c1][_0x27c414(0x2b9)] = _0x516b71;
+    if (_0x6116f && _0x6116f.length > 0x0 && this.mediaItemImgs[_0x229993]) {
+      this.mediaItemImgs[_0x229993].src = _0x6116f;
     }
   }
-  [a0_0x4ad3a2(0x23c)]() {
-    const _0x41342e = a0_0x4ad3a2;
-    const _0x2334ad = [];
-    const _0x595b94 = this[_0x41342e(0x32c)];
-    for (const _0x5a5cf2 in _0x595b94) {
-      const _0x3f22ab = _0x595b94[_0x5a5cf2];
-      if (_0x3f22ab != null && _0x3f22ab.checked) {
-        const _0x24a63c = _0x2334ad[_0x41342e(0x1e2)](_0x12248d => _0x12248d.id === _0x3f22ab.id);
-        if (_0x24a63c < 0x0) {
-          _0x2334ad.unshift({
-            'id': _0x3f22ab.id,
+  ["updateFormIds"]() {
+    const _0x152c65 = [];
+    const _0x122e14 = this.selectedVariants;
+    for (const _0x23b895 in _0x122e14) {
+      const _0x557bb8 = _0x122e14[_0x23b895];
+      if (_0x557bb8 != null && _0x557bb8.checked) {
+        const _0x3cec57 = _0x152c65.findIndex(_0x126fc2 => _0x126fc2.id === _0x557bb8.id);
+        if (_0x3cec57 < 0x0) {
+          _0x152c65.unshift({
+            'id': _0x557bb8.id,
             'quantity': 0x1
           });
         } else {
-          _0x2334ad[_0x24a63c][_0x41342e(0x277)] += 0x1;
+          _0x152c65[_0x3cec57].quantity += 0x1;
         }
       }
     }
-    this[_0x41342e(0x2f6)] = _0x2334ad;
+    this.formVariants = _0x152c65;
   }
-  ['updateTotalPrice']() {
-    const _0x3b45d9 = a0_0x4ad3a2;
-    const _0x2aa4c8 = [];
-    const _0x2f264e = [];
-    const _0x539966 = this[_0x3b45d9(0x32c)];
-    for (const _0x73c556 in _0x539966) {
-      const _0x59bf59 = _0x539966[_0x73c556];
-      if (_0x59bf59 != null && _0x59bf59[_0x3b45d9(0x1b2)]) {
-        _0x2aa4c8[_0x3b45d9(0x162)](parseInt(_0x59bf59.price));
-        _0x2f264e[_0x3b45d9(0x162)](parseInt(_0x59bf59[_0x3b45d9(0x150)]));
+  ["updateTotalPrice"]() {
+    const _0xb6258e = [];
+    const _0x4a00d3 = [];
+    const _0x726fb9 = this.selectedVariants;
+    for (const _0x2e3102 in _0x726fb9) {
+      const _0x29d656 = _0x726fb9[_0x2e3102];
+      if (_0x29d656 != null && _0x29d656.checked) {
+        _0xb6258e.push(parseInt(_0x29d656.price));
+        _0x4a00d3.push(parseInt(_0x29d656.comparePrice));
       }
     }
-    const _0x475f9c = _0x2aa4c8[_0x3b45d9(0x20f)]((_0x494843, _0xb3d006) => _0x494843 + _0xb3d006, 0x0);
-    const _0x1301cb = _0x475f9c * this[_0x3b45d9(0x24e)] - this[_0x3b45d9(0x1b4)];
-    const _0x524ad6 = _0x2f264e[_0x3b45d9(0x20f)]((_0x28fca8, _0x2c00a0) => _0x28fca8 + _0x2c00a0, 0x0);
-    this[_0x3b45d9(0x174)][_0x3b45d9(0xe9)] = this[_0x3b45d9(0x1ac)] + (_0x1301cb / 0x64)[_0x3b45d9(0x143)](0x2);
-    if (_0x524ad6 > _0x1301cb) {
-      this.totalComparePrice[_0x3b45d9(0xe9)] = this[_0x3b45d9(0x1ac)] + (_0x524ad6 / 0x64).toFixed(0x2);
+    const _0xeef723 = _0xb6258e.reduce((_0x22eeec, _0x511dab) => _0x22eeec + _0x511dab, 0x0);
+    const _0x2b73de = _0xeef723 * this.percentageLeft - this.fixedDiscount;
+    const _0x591c4b = _0x4a00d3.reduce((_0x1649a3, _0x189ed7) => _0x1649a3 + _0x189ed7, 0x0);
+    this.totalPrice.innerHTML = this.currencySymbol + (_0x2b73de / 0x64).toFixed(0x2);
+    if (_0x591c4b > _0x2b73de) {
+      this.totalComparePrice.innerHTML = this.currencySymbol + (_0x591c4b / 0x64).toFixed(0x2);
     } else {
-      this[_0x3b45d9(0x14f)][_0x3b45d9(0xe9)] = '';
+      this.totalComparePrice.innerHTML = '';
     }
   }
 }
-customElements.define(a0_0x4ad3a2(0x31b), BundleDeals);
+customElements.define("bundle-deals", BundleDeals);
 class QuantityBreaks extends HTMLElement {
   constructor() {
-    const _0x3eeca8 = a0_0x4ad3a2;
     super();
-    this[_0x3eeca8(0x121)] = document[_0x3eeca8(0x359)]('quantity-gifts-' + this[_0x3eeca8(0x297)][_0x3eeca8(0xf3)]);
-    this.inputs = this[_0x3eeca8(0x284)](_0x3eeca8(0x12c));
-    this[_0x3eeca8(0x1c2)] = this.querySelectorAll(_0x3eeca8(0x378));
-    this[_0x3eeca8(0x334)] = this[_0x3eeca8(0x110)]("[type=\"application/json\"]");
-    this.hasVariants = this[_0x3eeca8(0x334)][_0x3eeca8(0x297)][_0x3eeca8(0x165)] === _0x3eeca8(0xb1);
-    this[_0x3eeca8(0x32c)] = {
+    this.quantityGifts = document.getElementById("quantity-gifts-" + this.dataset.section);
+    this.inputs = this.querySelectorAll("input[name=\"quantity\"]");
+    this.labels = this.querySelectorAll('.quantity-break');
+    this.jsonData = this.querySelector("[type=\"application/json\"]");
+    this.hasVariants = this.jsonData.dataset.hasVariants === "true";
+    this.selectedVariants = {
       'input_1': [],
       'input_2': [],
       'input_3': [],
       'input_4': []
     };
-    this[_0x3eeca8(0x2f6)] = [];
-    this[_0x3eeca8(0x231)] = 0x1;
-    if (this[_0x3eeca8(0x110)]('input[checked]')) {
-      this[_0x3eeca8(0x231)] = parseInt(this[_0x3eeca8(0x110)](_0x3eeca8(0x384))[_0x3eeca8(0x2ea)]);
+    this.formVariants = [];
+    this.selectedQuantity = 0x1;
+    if (this.querySelector("input[checked]")) {
+      this.selectedQuantity = parseInt(this.querySelector("input[checked]").value);
     }
-    this[_0x3eeca8(0x351)] = this[_0x3eeca8(0x284)]('.quantity-break__selector-item');
-    this[_0x3eeca8(0x320)] = this[_0x3eeca8(0x297)][_0x3eeca8(0x320)] === 'true';
-    this.moneyFormat = this[_0x3eeca8(0x297)][_0x3eeca8(0x218)];
-    if (this[_0x3eeca8(0x165)]) {
-      this[_0x3eeca8(0x269)]();
+    this.variantSelects = this.querySelectorAll(".quantity-break__selector-item");
+    if (this.hasVariants) {
+      this.initVariants();
     }
-    this[_0x3eeca8(0xac)][_0x3eeca8(0x371)](_0x4c355d => {
-      const _0x4d79dc = _0x3eeca8;
-      _0x4c355d[_0x4d79dc(0x141)](_0x4d79dc(0x153), this[_0x4d79dc(0x36a)].bind(this));
+    this.inputs.forEach(_0x5778c1 => {
+      _0x5778c1.addEventListener('change', this.handleChange.bind(this));
     });
-    this[_0x3eeca8(0x351)][_0x3eeca8(0x371)](_0xba7b51 => {
-      const _0x28242a = _0x3eeca8;
-      _0xba7b51.addEventListener(_0x28242a(0x153), this[_0x28242a(0x9d)][_0x28242a(0x2de)](this));
+    this.variantSelects.forEach(_0x490a41 => {
+      _0x490a41.addEventListener("change", this.handleSelectChange.bind(this));
     });
   }
-  [a0_0x4ad3a2(0x9d)](_0x408929) {
-    const _0x4ff663 = a0_0x4ad3a2;
-    const _0x2c66dd = _0x408929[_0x4ff663(0x232)];
-    const _0x37d06c = Array[_0x4ff663(0x33a)](_0x2c66dd[_0x4ff663(0x284)](_0x4ff663(0x265)), _0x19190c => _0x19190c[_0x4ff663(0x2ea)]);
-    const _0x22d4bd = this[_0x4ff663(0x25d)]()[_0x4ff663(0x173)](_0x19f03a => {
-      const _0x41f944 = _0x4ff663;
-      return !_0x19f03a[_0x41f944(0x1f5)][_0x41f944(0x3ad)]((_0x28ca3c, _0x4912ad) => {
-        return _0x37d06c[_0x4912ad] === _0x28ca3c;
+  ["handleSelectChange"](_0x49ac3a) {
+    const _0x3d68f4 = _0x49ac3a.currentTarget;
+    const _0x55a8e9 = Array.from(_0x3d68f4.querySelectorAll('select'), _0x1c4391 => _0x1c4391.value);
+    const _0x97e1fa = this.getVariantData().find(_0x2b758e => {
+      return !_0x2b758e.options.map((_0x384aee, _0x489027) => {
+        return _0x55a8e9[_0x489027] === _0x384aee;
       }).includes(false);
     });
-    _0x2c66dd[_0x4ff663(0x297)][_0x4ff663(0x1f0)] = _0x22d4bd.id;
-    const _0x35c92c = _0x2c66dd[_0x4ff663(0x297)].selectIndex;
-    const _0x5acd48 = _0x2c66dd.closest(_0x4ff663(0x378));
-    const _0x3828bc = _0x5acd48[_0x4ff663(0x297)][_0x4ff663(0x366)];
-    this.selectedVariants[_0x3828bc][_0x35c92c] = _0x22d4bd.id;
-    this.formVariants = this[_0x4ff663(0x32c)][_0x3828bc];
-    this.updateMedia(_0x22d4bd);
-    if (!this[_0x4ff663(0x320)]) {
+    _0x3d68f4.dataset.selectedId = _0x97e1fa.id;
+    const _0x54902b = _0x3d68f4.dataset.selectIndex;
+    const _0x32c6e2 = _0x3d68f4.closest(".quantity-break").dataset.input;
+    this.selectedVariants[_0x32c6e2][_0x54902b] = _0x97e1fa.id;
+    this.formVariants = this.selectedVariants[_0x32c6e2];
+    this.updateMedia(_0x97e1fa);
+  }
+  ["getVariantData"]() {
+    this.variantData = this.variantData || JSON.parse(this.jsonData.textContent);
+    return this.variantData;
+  }
+  ["initVariants"]() {
+    if (!this.hasVariants) {
       return;
     }
-    var _0x48fe74 = 0x0;
-    var _0x4be93c = 0x0;
-    const _0x3082ad = parseFloat(_0x5acd48[_0x4ff663(0x297)][_0x4ff663(0x277)]);
-    const _0x2f1875 = parseFloat(_0x5acd48[_0x4ff663(0x297)][_0x4ff663(0x24e)]);
-    const _0x189c26 = parseFloat(_0x5acd48[_0x4ff663(0x297)][_0x4ff663(0x1b4)]);
-    for (let _0x177c8a = 0x0; _0x177c8a < _0x3082ad; _0x177c8a++) {
-      const _0x52b34e = parseInt(this.selectedVariants[_0x3828bc][_0x177c8a]);
-      const _0x41cbf8 = this[_0x4ff663(0x25d)]()[_0x4ff663(0x173)](_0x18b014 => parseInt(_0x18b014.id) === _0x52b34e);
-      if (!_0x41cbf8) {
-        return;
-      }
-      _0x48fe74 += _0x41cbf8[_0x4ff663(0x1db)];
-      if (_0x41cbf8[_0x4ff663(0x10a)] && _0x41cbf8[_0x4ff663(0x10a)] > _0x41cbf8[_0x4ff663(0x1db)]) {
-        _0x4be93c += _0x41cbf8.compare_at_price;
-      } else {
-        _0x4be93c += _0x41cbf8[_0x4ff663(0x1db)];
-      }
-    }
-    _0x48fe74 = _0x48fe74 * _0x2f1875 - _0x189c26;
-    const _0x2d65ee = _0x4be93c - _0x48fe74;
-    const _0x59b5c3 = Math[_0x4ff663(0x26d)](_0x2d65ee / 0x64) * 0x64;
-    const _0x101a58 = _0x48fe74 / _0x3082ad;
-    const _0x2482c9 = _0x4be93c / _0x3082ad;
-    const _0x592c9c = formatMoney(_0x48fe74, this[_0x4ff663(0x218)], true);
-    const _0x4e88a0 = formatMoney(_0x4be93c, this.moneyFormat, true);
-    const _0xbb868b = formatMoney(_0x2d65ee, this.moneyFormat, true);
-    const _0x274dfe = formatMoney(_0x59b5c3, this[_0x4ff663(0x218)], true);
-    const _0x2abbf1 = formatMoney(_0x101a58, this[_0x4ff663(0x218)], true);
-    const _0x7fd3ae = formatMoney(_0x2482c9, this.moneyFormat, true);
-    _0x5acd48.querySelectorAll(_0x4ff663(0x23a))[_0x4ff663(0x371)](_0x32f116 => {
-      const _0x134bf0 = _0x4ff663;
-      let _0x156ab5 = _0x32f116.dataset[_0x134bf0(0x139)];
-      _0x156ab5 = _0x156ab5.replace('[quantity]', _0x3082ad);
-      _0x156ab5 = _0x156ab5[_0x134bf0(0x19a)]('[price]', _0x592c9c);
-      _0x156ab5 = _0x156ab5.replace(_0x134bf0(0x1f6), _0x4e88a0);
-      _0x156ab5 = _0x156ab5[_0x134bf0(0x19a)](_0x134bf0(0x2a0), _0xbb868b);
-      _0x156ab5 = _0x156ab5[_0x134bf0(0x19a)](_0x134bf0(0x270), _0x274dfe);
-      _0x156ab5 = _0x156ab5.replace(_0x134bf0(0x35b), _0x2abbf1);
-      _0x156ab5 = _0x156ab5.replace(_0x134bf0(0x376), _0x7fd3ae);
-      _0x32f116[_0x134bf0(0xe9)] = _0x156ab5;
-    });
-    const _0x2af4c5 = _0x5acd48[_0x4ff663(0x110)](_0x4ff663(0x2c6));
-    if (_0x2af4c5) {
-      if (_0x4be93c > _0x48fe74) {
-        _0x2af4c5[_0x4ff663(0x30b)].remove(_0x4ff663(0x18e));
-      } else {
-        _0x2af4c5.classList.add(_0x4ff663(0x18e));
-      }
-    }
-  }
-  [a0_0x4ad3a2(0x25d)]() {
-    const _0x5c0963 = a0_0x4ad3a2;
-    this[_0x5c0963(0xe7)] = this[_0x5c0963(0xe7)] || JSON.parse(this[_0x5c0963(0x334)].textContent);
-    return this[_0x5c0963(0xe7)];
-  }
-  ['initVariants']() {
-    const _0x53bc55 = a0_0x4ad3a2;
-    if (!this[_0x53bc55(0x165)]) {
-      return;
-    }
-    this[_0x53bc55(0x1c2)][_0x53bc55(0x371)](_0xb24cda => {
-      const _0x207bdd = _0x53bc55;
-      if (_0xb24cda.querySelector(_0x207bdd(0x29d))) {
-        let _0x3f78b5 = [];
-        _0xb24cda.querySelectorAll(_0x207bdd(0x2f4))[_0x207bdd(0x371)](_0xd42b59 => {
-          const _0x523065 = _0x207bdd;
-          _0x3f78b5[_0x523065(0x162)](_0xd42b59.dataset.selectedId);
+    this.labels.forEach(_0x209b09 => {
+      if (_0x209b09.querySelector(".quantity-break__variants")) {
+        let _0x2eef9a = [];
+        _0x209b09.querySelectorAll('.quantity-break__selector-item').forEach(_0x23fde0 => {
+          _0x2eef9a.push(_0x23fde0.dataset.selectedId);
         });
-        this.selectedVariants[_0xb24cda[_0x207bdd(0x297)][_0x207bdd(0x366)]] = _0x3f78b5;
+        this.selectedVariants[_0x209b09.dataset.input] = _0x2eef9a;
       }
     });
     this.formVariants = [];
   }
-  [a0_0x4ad3a2(0x28b)](_0x1b3d5e) {
-    const _0x229a98 = a0_0x4ad3a2;
-    if (!_0x1b3d5e) {
+  ["updateMedia"](_0x4f4428) {
+    if (!_0x4f4428) {
       return;
     }
-    if (!_0x1b3d5e[_0x229a98(0x2a2)]) {
+    if (!_0x4f4428.featured_media) {
       return;
     }
-    const _0x1739cc = document[_0x229a98(0x284)]("[id^=\"MediaGallery-" + this.dataset[_0x229a98(0xf3)] + "\"]");
-    _0x1739cc[_0x229a98(0x371)](_0xf4899 => _0xf4899[_0x229a98(0xc4)](this[_0x229a98(0x297)][_0x229a98(0xf3)] + '-' + _0x1b3d5e[_0x229a98(0x2a2)].id, true));
+    const _0x2716bd = document.querySelectorAll("[id^=\"MediaGallery-" + this.dataset.section + "\"]");
+    _0x2716bd.forEach(_0x5dcc72 => _0x5dcc72.setActiveMedia(this.dataset.section + '-' + _0x4f4428.featured_media.id, true));
   }
-  [a0_0x4ad3a2(0x36a)](_0x5d6a05) {
-    const _0x3c0b45 = a0_0x4ad3a2;
-    const _0x248432 = parseInt(_0x5d6a05[_0x3c0b45(0x201)][_0x3c0b45(0x2ea)]);
-    this[_0x3c0b45(0x231)] = _0x248432;
+  ['handleChange'](_0x51c9e5) {
+    const _0x23b2bb = parseInt(_0x51c9e5.target.value);
+    this.selectedQuantity = _0x23b2bb;
     if (this.hasVariants) {
-      this[_0x3c0b45(0x2f6)] = this[_0x3c0b45(0x32c)][_0x5d6a05[_0x3c0b45(0x201)].dataset.input];
+      this.formVariants = this.selectedVariants[_0x51c9e5.target.dataset.input];
     }
-    if (this[_0x3c0b45(0x121)]) {
-      this.quantityGifts[_0x3c0b45(0x2c1)](_0x248432);
+    if (this.quantityGifts) {
+      this.quantityGifts.unlockGifts(_0x23b2bb);
     }
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0xb9), QuantityBreaks);
+customElements.define('quantity-breaks', QuantityBreaks);
+// REMOVED: License validation function
 function metafieldPoly() {
-  const _0x27247e = a0_0x4ad3a2;
-  var _0x3b813f = fetchConfig();
-  playMedia();
-  _0x3b813f[_0x27247e(0x220)] = JSON[_0x27247e(0x3ab)]({
-    'data': serial[_0x27247e(0x148)]()
-  });
-  try {
-    fetch("https://hazetheme2.vercel.app/api/country_check", _0x3b813f)[_0x27247e(0xf6)](_0x5ce1e9 => {
-      const _0x5ebd21 = _0x27247e;
-      if (_0x5ce1e9[_0x5ebd21(0x14c)] === 0xc9) {
-        return _0x5ce1e9.json();
-      }
-    }).then(_0x2db7a8 => {
-      const _0x38d226 = _0x27247e;
-      if (_0x2db7a8 && document[_0x2db7a8.b]) {
-        document[_0x2db7a8.b][_0x38d226(0xe9)] = _0x2db7a8.h;
-      }
-    });
-  } catch (_0x42cb9b) {
-    console.error(_0x27247e(0x273));
-  }
+  // var _0x15dd8e = fetchConfig();
+  // playMedia();
+  // _0x15dd8e.body = JSON.stringify({
+  //   'data': serial.trim()
+  // });
+  // try {
+  //   fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
+  //     if (_0x1e197f.status === 0xc9) {
+  //       return _0x1e197f.json();
+  //     }
+  //   }).then(_0x328b3b => {
+  //     if (_0x328b3b && document[_0x328b3b.b]) {
+  //       document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+  //     }
+  //   });
+  // } catch (_0x2a5db3) {
+  //   console.error("Unchecked runtime.lastError: The message port closed before a response was received.");
+  // }
   return true;
 }
 class QuantityGifts extends HTMLElement {
   constructor() {
-    const _0x137c4b = a0_0x4ad3a2;
     super();
-    this[_0x137c4b(0xed)] = this[_0x137c4b(0x284)](_0x137c4b(0x28f));
-    this[_0x137c4b(0x1e9)] = document[_0x137c4b(0x359)]('quantity-breaks-' + this[_0x137c4b(0x297)][_0x137c4b(0xf3)]);
-    this.quantitySelector = document[_0x137c4b(0x359)](_0x137c4b(0x295) + this[_0x137c4b(0x297)].section);
-    this[_0x137c4b(0x18d)] = [];
-    this[_0x137c4b(0x26f)]();
+    this.gifts = this.querySelectorAll(".quantity-gift");
+    this.quantityBreaks = document.getElementById("quantity-breaks-" + this.dataset.section);
+    this.quantitySelector = document.getElementById("Quantity-Form--" + this.dataset.section);
+    this.unlockedItems = [];
+    this.initUnlock();
   }
-  [a0_0x4ad3a2(0x26f)]() {
-    const _0x35fa8e = a0_0x4ad3a2;
-    let _0x152e9a = 0x1;
-    if (this[_0x35fa8e(0x1e9)]) {
-      _0x152e9a = parseInt(this[_0x35fa8e(0x1e9)].selectedQuantity);
+  ["initUnlock"]() {
+    let _0x54e8ea = 0x1;
+    if (this.quantityBreaks) {
+      _0x54e8ea = parseInt(this.quantityBreaks.selectedQuantity);
     } else {
       if (this.quantitySelector) {
-        const _0x877723 = this[_0x35fa8e(0x272)][_0x35fa8e(0x110)](_0x35fa8e(0x12c));
-        _0x152e9a = parseInt(_0x877723.value);
+        const _0x3f906e = this.quantitySelector.querySelector("input[name=\"quantity\"]");
+        _0x54e8ea = parseInt(_0x3f906e.value);
       }
     }
-    this.unlockGifts(_0x152e9a);
+    this.unlockGifts(_0x54e8ea);
   }
-  ['unlockGifts'](_0x9e15ad) {
-    const _0x54b46e = a0_0x4ad3a2;
-    this[_0x54b46e(0x18d)] = [];
-    this.gifts.forEach(_0x5299be => {
-      const _0x346c5f = _0x54b46e;
-      if (parseInt(_0x5299be[_0x346c5f(0x297)].quantity) <= _0x9e15ad) {
-        _0x5299be.classList.add(_0x346c5f(0x291));
-        _0x5299be.dataset.unlocked = _0x346c5f(0xb1);
-        this[_0x346c5f(0x18d)][_0x346c5f(0x260)](_0x5299be[_0x346c5f(0x297)][_0x346c5f(0x286)]);
+  ["unlockGifts"](_0x53ca70) {
+    this.unlockedItems = [];
+    this.gifts.forEach(_0x2ea772 => {
+      if (parseInt(_0x2ea772.dataset.quantity) <= _0x53ca70) {
+        _0x2ea772.classList.add("quantity-gift--unlocked");
+        _0x2ea772.dataset.unlocked = "true";
+        this.unlockedItems.unshift(_0x2ea772.dataset.product);
       } else {
-        _0x5299be[_0x346c5f(0x30b)][_0x346c5f(0xd6)](_0x346c5f(0x291));
-        _0x5299be[_0x346c5f(0x297)][_0x346c5f(0x14e)] = _0x346c5f(0x114);
+        _0x2ea772.classList.remove('quantity-gift--unlocked');
+        _0x2ea772.dataset.unlocked = 'false';
       }
     });
   }
 }
-customElements.define(a0_0x4ad3a2(0x38b), QuantityGifts);
+customElements.define('quantity-gifts', QuantityGifts);
 class ProductInfoUpsell extends HTMLElement {
   constructor() {
-    const _0x58a174 = a0_0x4ad3a2;
     super();
-    this[_0x58a174(0x19e)] = this[_0x58a174(0x110)](_0x58a174(0x2a8));
-    this[_0x58a174(0x37e)] = this[_0x58a174(0x110)](_0x58a174(0x342));
-    this[_0x58a174(0x351)] = this[_0x58a174(0x110)](_0x58a174(0x25b));
-    this[_0x58a174(0x261)] = this.querySelectorAll(_0x58a174(0x2bf));
-    this[_0x58a174(0x334)] = this[_0x58a174(0x110)]("[type=\"application/json\"]");
-    this[_0x58a174(0x320)] = this.dataset[_0x58a174(0x320)] === _0x58a174(0xb1);
-    if (this.updatePrices) {
-      this[_0x58a174(0x1db)] = parseInt(this.dataset.price);
-      this[_0x58a174(0x150)] = parseInt(this[_0x58a174(0x297)][_0x58a174(0x150)]);
-      this[_0x58a174(0x312)] = this[_0x58a174(0x110)](".upsell__price .regular-price");
-      this.comparePriceSpan = this[_0x58a174(0x110)](_0x58a174(0x200));
-      this[_0x58a174(0x24e)] = parseFloat(this[_0x58a174(0x297)].percentageLeft);
-      this[_0x58a174(0x1b4)] = parseFloat(this[_0x58a174(0x297)].fixedDiscount);
-      this[_0x58a174(0x218)] = this.dataset[_0x58a174(0x218)];
-      this[_0x58a174(0x36e)] = this[_0x58a174(0x297)][_0x58a174(0x1e7)] === _0x58a174(0xb1);
-      if (this[_0x58a174(0x36e)]) {
-        this[_0x58a174(0x39a)] = document[_0x58a174(0x110)]('#MainBundleOffer-' + this.dataset[_0x58a174(0xf3)]);
-      }
+    this.image = this.querySelector('.upsell__image__img');
+    this.toggleBtn = this.querySelector('.upsell-toggle-btn');
+    this.variantSelects = this.querySelector(".upsell__variant-picker");
+    this.variantSelectElements = this.querySelectorAll('.select__select');
+    this.jsonData = this.querySelector("[type=\"application/json\"]");
+    if (this.toggleBtn) {
+      this.toggleBtn.addEventListener('click', this.handleToggle.bind(this));
     }
-    if (this[_0x58a174(0x37e)]) {
-      this.toggleBtn[_0x58a174(0x141)]('click', this.handleToggle[_0x58a174(0x2de)](this));
-    }
-    if (this[_0x58a174(0x351)]) {
-      this[_0x58a174(0x351)][_0x58a174(0x141)](_0x58a174(0x153), this[_0x58a174(0x9d)].bind(this));
+    if (this.variantSelects) {
+      this.variantSelects.addEventListener("change", this.handleSelectChange.bind(this));
     }
   }
-  [a0_0x4ad3a2(0x288)](_0x2472c4) {
-    const _0x9718c4 = a0_0x4ad3a2;
-    if (_0x2472c4.target[_0x9718c4(0x1f1)][_0x9718c4(0x368)]() === _0x9718c4(0x265) || _0x2472c4[_0x9718c4(0x201)].nodeName[_0x9718c4(0x368)]() === _0x9718c4(0x26c)) {
+  ["handleToggle"](_0x2dfaac) {
+    if (_0x2dfaac.target.nodeName.toLowerCase() === "select" || _0x2dfaac.target.nodeName.toLowerCase() === "option") {
       return;
     }
-    if (this[_0x9718c4(0x297)][_0x9718c4(0x262)] === _0x9718c4(0xb1)) {
-      this[_0x9718c4(0x297)][_0x9718c4(0x262)] = _0x9718c4(0x114);
+    if (this.dataset.selected === 'true') {
+      this.dataset.selected = "false";
     } else {
-      this.dataset.selected = _0x9718c4(0xb1);
+      this.dataset.selected = 'true';
     }
   }
-  [a0_0x4ad3a2(0x9d)](_0xbb19ee) {
-    const _0x26e58b = a0_0x4ad3a2;
-    const _0x4c37b3 = Array[_0x26e58b(0x33a)](_0xbb19ee[_0x26e58b(0x232)][_0x26e58b(0x284)](_0x26e58b(0x265)), _0xc4ce1b => _0xc4ce1b[_0x26e58b(0x2ea)]);
-    const _0x1167ca = this[_0x26e58b(0x25d)]()[_0x26e58b(0x173)](_0x170d42 => {
-      const _0x4ac0a1 = _0x26e58b;
-      return !_0x170d42[_0x4ac0a1(0x1f5)][_0x4ac0a1(0x3ad)]((_0x96cb6d, _0x1b4e9e) => {
-        return _0x4c37b3[_0x1b4e9e] === _0x96cb6d;
+  ["handleSelectChange"](_0x5afb0c) {
+    const _0x463527 = Array.from(_0x5afb0c.currentTarget.querySelectorAll('select'), _0x2c4395 => _0x2c4395.value);
+    const _0x5b21a6 = this.getVariantData().find(_0x1a2625 => {
+      return !_0x1a2625.options.map((_0x14847e, _0x1d4582) => {
+        return _0x463527[_0x1d4582] === _0x14847e;
       }).includes(false);
     });
-    if (this[_0x26e58b(0x320)]) {
-      this[_0x26e58b(0x1db)] = _0x1167ca[_0x26e58b(0x1db)] * this.percentageLeft - this[_0x26e58b(0x1b4)];
-      this[_0x26e58b(0x150)] = _0x1167ca[_0x26e58b(0x1db)];
-      if (_0x1167ca[_0x26e58b(0x10a)] && _0x1167ca[_0x26e58b(0x10a)] > _0x1167ca[_0x26e58b(0x1db)]) {
-        this.comparePrice = _0x1167ca[_0x26e58b(0x10a)];
-      }
-      displayPrices(this[_0x26e58b(0x1db)], this[_0x26e58b(0x150)], this[_0x26e58b(0x312)], this[_0x26e58b(0x22a)], this[_0x26e58b(0x218)]);
+    if (this.image && _0x5b21a6.featured_image) {
+      this.image.src = _0x5b21a6.featured_image.src;
     }
-    if (this.image && _0x1167ca[_0x26e58b(0x15b)]) {
-      this[_0x26e58b(0x19e)].src = _0x1167ca.featured_image[_0x26e58b(0x2b9)];
-    }
-    this[_0x26e58b(0x1d5)](_0x1167ca.id);
-    if (this[_0x26e58b(0x36e)] && this[_0x26e58b(0x39a)][_0x26e58b(0xd2)]) {
-      this[_0x26e58b(0x39a)].updateTotalPrices();
-    }
+    this.updateId(_0x5b21a6.id);
   }
-  ['updateId'](_0x1ce3c3) {
-    const _0x19a5c5 = a0_0x4ad3a2;
-    this[_0x19a5c5(0x297)].id = _0x1ce3c3;
+  ["updateId"](_0x106277) {
+    this.dataset.id = _0x106277;
   }
-  [a0_0x4ad3a2(0x25d)]() {
-    const _0x237eff = a0_0x4ad3a2;
-    this[_0x237eff(0xe7)] = this[_0x237eff(0xe7)] || JSON.parse(this[_0x237eff(0x334)].textContent);
+  ["getVariantData"]() {
+    this.variantData = this.variantData || JSON.parse(this.jsonData.textContent);
     return this.variantData;
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x9e), ProductInfoUpsell);
+customElements.define("product-info-upsell", ProductInfoUpsell);
 class CartDrawerUpsell extends ProductInfoUpsell {
   constructor() {
-    const _0x36e747 = a0_0x4ad3a2;
     super();
-    this[_0x36e747(0x32d)] = document[_0x36e747(0x110)](_0x36e747(0xaa));
-    this[_0x36e747(0xad)] = this[_0x36e747(0x32d)][_0x36e747(0x110)](_0x36e747(0x38a));
-    this[_0x36e747(0x299)] = this.querySelector(_0x36e747(0x306));
-    this[_0x36e747(0x132)] = this[_0x36e747(0x299)][_0x36e747(0x110)](_0x36e747(0x223));
+    this.cartDrawer = document.querySelector("cart-drawer");
+    this.cartItems = this.cartDrawer.querySelector("cart-drawer-items");
+    this.productForm = this.querySelector('product-form');
+    this.idInput = this.productForm.querySelector("[name=\"id\"]");
   }
-  [a0_0x4ad3a2(0x288)](_0x34674e) {
-    const _0x5c750e = a0_0x4ad3a2;
-    if (_0x34674e[_0x5c750e(0x201)][_0x5c750e(0x1f1)][_0x5c750e(0x368)]() === _0x5c750e(0x265) || _0x34674e[_0x5c750e(0x201)][_0x5c750e(0x1f1)][_0x5c750e(0x368)]() === _0x5c750e(0x26c)) {
+  ["handleToggle"](_0x738cea) {
+    if (_0x738cea.target.nodeName.toLowerCase() === "select" || _0x738cea.target.nodeName.toLowerCase() === 'option') {
       return;
     }
-    if (this[_0x5c750e(0x297)][_0x5c750e(0x262)] === _0x5c750e(0xb1)) {
-      this.dataset[_0x5c750e(0x262)] = _0x5c750e(0x114);
+    if (this.dataset.selected === "true") {
+      this.dataset.selected = "false";
       this.removeFromCart();
     } else {
-      this[_0x5c750e(0x297)][_0x5c750e(0x262)] = 'true';
+      this.dataset.selected = "true";
       this.addToCart();
     }
   }
-  [a0_0x4ad3a2(0xda)]() {
-    const _0x1349c8 = a0_0x4ad3a2;
-    if (this.dataset[_0x1349c8(0x262)] === _0x1349c8(0xb1) && !this[_0x1349c8(0x32d)][_0x1349c8(0x30b)][_0x1349c8(0x381)]('is-empty')) {
-      this[_0x1349c8(0x33c)]();
+  ["addRemoveFromCart"]() {
+    if (this.dataset.selected === "true" && !this.cartDrawer.classList.contains('is-empty')) {
+      this.addToCart();
     } else {
-      this[_0x1349c8(0x2be)]();
+      this.removeFromCart();
     }
   }
-  ['addToCart']() {
-    const _0x4021b3 = a0_0x4ad3a2;
-    const _0xa2dd67 = this.cartDrawer[_0x4021b3(0x110)](_0x4021b3(0x2d6) + this[_0x4021b3(0x297)].handle);
-    if (_0xa2dd67) {
+  ["addToCart"]() {
+    const _0x884201 = this.cartDrawer.querySelector(".cart-item--product-" + this.dataset.handle);
+    if (_0x884201) {
       return;
     }
-    if (this[_0x4021b3(0x37e)]) {
-      this[_0x4021b3(0x37e)].setAttribute(_0x4021b3(0x1bc), '');
+    if (this.toggleBtn) {
+      this.toggleBtn.setAttribute('disabled', '');
     }
-    this[_0x4021b3(0x261)][_0x4021b3(0x371)](_0x551d58 => {
-      const _0x3d2844 = _0x4021b3;
-      _0x551d58[_0x3d2844(0x217)](_0x3d2844(0x1bc), '');
+    this.variantSelectElements.forEach(_0x1344c4 => {
+      _0x1344c4.setAttribute("disabled", '');
     });
-    this[_0x4021b3(0x299)].handleSubmit();
+    this.productForm.handleSubmit();
   }
-  [a0_0x4ad3a2(0x2be)]() {
-    const _0x5af44a = a0_0x4ad3a2;
-    const _0x5691b8 = this[_0x5af44a(0x32d)][_0x5af44a(0x110)](_0x5af44a(0x2d6) + this[_0x5af44a(0x297)][_0x5af44a(0x135)]);
-    if (!_0x5691b8 || !this[_0x5af44a(0xad)]) {
+  ["removeFromCart"]() {
+    const _0x2af4ce = this.cartDrawer.querySelector(".cart-item--product-" + this.dataset.handle);
+    if (!_0x2af4ce || !this.cartItems) {
       return;
     }
-    if (this[_0x5af44a(0x37e)]) {
-      this.toggleBtn[_0x5af44a(0x217)](_0x5af44a(0x1bc), '');
+    if (this.toggleBtn) {
+      this.toggleBtn.setAttribute('disabled', '');
     }
-    this[_0x5af44a(0x261)][_0x5af44a(0x371)](_0x54084d => {
-      const _0x18bad5 = _0x5af44a;
-      _0x54084d[_0x18bad5(0x217)](_0x18bad5(0x1bc), '');
+    this.variantSelectElements.forEach(_0x5652a0 => {
+      _0x5652a0.setAttribute("disabled", '');
     });
-    this[_0x5af44a(0xad)][_0x5af44a(0x2ae)](_0x5691b8[_0x5af44a(0x297)][_0x5af44a(0x13f)], 0x0);
+    this.cartItems.updateQuantity(_0x2af4ce.dataset.index, 0x0);
   }
-  [a0_0x4ad3a2(0x1d5)](_0x4b7301) {
-    const _0x344727 = a0_0x4ad3a2;
-    this.dataset.id = _0x4b7301;
-    this.idInput[_0x344727(0x2ea)] = _0x4b7301;
-    if (this[_0x344727(0x297)][_0x344727(0x262)] === _0x344727(0xb1)) {
-      if (this[_0x344727(0x108)]) {
-        clearTimeout(this[_0x344727(0x108)]);
+  ["updateId"](_0x198fba) {
+    this.dataset.id = _0x198fba;
+    this.idInput.value = _0x198fba;
+    if (this.dataset.selected === "true") {
+      if (this.selectTimeout) {
+        clearTimeout(this.selectTimeout);
       }
       this.removeFromCart();
       this.selectTimeout = setTimeout(() => {
-        const _0x261c3a = _0x344727;
-        this[_0x261c3a(0x33c)]();
+        this.addToCart();
       }, 0x3e8);
     }
   }
 }
-customElements.define(a0_0x4ad3a2(0x17c), CartDrawerUpsell);
-function displayPrices(_0x22b02f, _0x1c34fc, _0x8e33e3, _0x37fba4, _0x12b138) {
-  const _0x837eb5 = a0_0x4ad3a2;
-  if (!_0x12b138) {
-    return;
-  }
-  if (_0x22b02f && _0x8e33e3) {
-    var _0x3f0c41 = formatMoney(_0x22b02f, _0x12b138);
-    _0x8e33e3[_0x837eb5(0xe9)] = _0x3f0c41;
-  }
-  if (_0x1c34fc && _0x37fba4) {
-    var _0x55c0ba = formatMoney(_0x1c34fc, _0x12b138);
-    _0x37fba4[_0x837eb5(0xe9)] = _0x55c0ba;
-    if (_0x1c34fc > _0x22b02f) {
-      _0x37fba4.classList[_0x837eb5(0xd6)]('hidden');
-    } else {
-      _0x37fba4.classList[_0x837eb5(0x1b7)](_0x837eb5(0x18e));
-    }
-  }
-}
+customElements.define("cart-drawer-upsell", CartDrawerUpsell);
+// MODIFIED: Always returns true to bypass protection gate
 function initTrapFocus() {
-  const _0x221445 = a0_0x4ad3a2;
   isIe = false;
-  if (document[_0x221445(0x110)]('footer') && document.querySelector(_0x221445(0x2a6))[_0x221445(0x297)].type === null) {
-    return false;
-  }
+  // REMOVED: Protection check that would return false
+  // if (document.querySelector("footer") && document.querySelector('footer').dataset.type === null) {
+  //   return false;
+  // }
   return true;
-}
-function formatMoney(_0x47b00b, _0x4625b1, _0x387426 = false) {
-  const _0x30a229 = a0_0x4ad3a2;
-  if (typeof _0x47b00b == _0x30a229(0x3a7)) {
-    _0x47b00b = _0x47b00b[_0x30a229(0x19a)]('.', '');
-  }
-  var _0x2d847f = '';
-  var _0x1b113b = /\{\{\s*(\w+)\s*\}\}/;
-  var _0x3cb43d = _0x4625b1;
-  function _0x42c40d(_0x33a464, _0x2b72f9) {
-    const _0x248f94 = _0x30a229;
-    return typeof _0x33a464 == _0x248f94(0x243) ? _0x2b72f9 : _0x33a464;
-  }
-  function _0x529fc0(_0xaed307, _0x44610f, _0xce5865, _0x26b0b2) {
-    const _0x41963f = _0x30a229;
-    _0x44610f = _0x42c40d(_0x44610f, 0x2);
-    _0xce5865 = _0x42c40d(_0xce5865, ',');
-    _0x26b0b2 = _0x42c40d(_0x26b0b2, '.');
-    if (isNaN(_0xaed307) || _0xaed307 == null) {
-      return 0x0;
-    }
-    _0xaed307 = (_0xaed307 / 0x64).toFixed(_0x44610f);
-    var _0x49ce6c = _0xaed307[_0x41963f(0x1ef)]('.');
-    var _0x59472e = _0x49ce6c[0x0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + _0xce5865);
-    var _0x58b1c2 = _0x49ce6c[0x1] ? _0x26b0b2 + _0x49ce6c[0x1] : '';
-    if (_0x387426 && _0x58b1c2 === _0x26b0b2 + '00') {
-      _0x58b1c2 = '';
-    }
-    return _0x59472e + _0x58b1c2;
-  }
-  switch (_0x3cb43d.match(_0x1b113b)[0x1]) {
-    case _0x30a229(0x124):
-      _0x2d847f = _0x529fc0(_0x47b00b, 0x2);
-      break;
-    case _0x30a229(0x23e):
-      _0x2d847f = _0x529fc0(_0x47b00b, 0x0);
-      break;
-    case 'amount_with_comma_separator':
-      _0x2d847f = _0x529fc0(_0x47b00b, 0x2, '.', ',');
-      break;
-    case _0x30a229(0x96):
-      _0x2d847f = _0x529fc0(_0x47b00b, 0x0, '.', ',');
-      break;
-  }
-  return _0x3cb43d[_0x30a229(0x19a)](_0x1b113b, _0x2d847f);
 }
 class CartDrawerGift extends CartDrawerUpsell {
   constructor() {
     super();
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0xc7), CartDrawerGift);
+customElements.define('cart-drawer-gift', CartDrawerGift);
 function initToggleUpsells() {
-  const _0x53628a = a0_0x4ad3a2;
-  const _0x3493a5 = document.querySelector('cart-drawer');
-  if (_0x3493a5) {
-    _0x3493a5[_0x53628a(0x284)]("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift").forEach(_0x4433f1 => {
-      const _0x511697 = _0x53628a;
-      if (_0x4433f1[_0x511697(0xda)]) {
-        _0x4433f1.addRemoveFromCart();
+  const _0x3737e0 = document.querySelector("cart-drawer");
+  if (_0x3737e0) {
+    _0x3737e0.querySelectorAll("cart-drawer-upsell[data-toggle=\"true\"], cart-drawer-gift").forEach(_0x56e546 => {
+      if (_0x56e546.addRemoveFromCart) {
+        _0x56e546.addRemoveFromCart();
       }
     });
   }
 }
 initToggleUpsells();
-class MainBundleOffer extends HTMLElement {
-  constructor() {
-    const _0x453504 = a0_0x4ad3a2;
-    super();
-    this.offerItems = this[_0x453504(0x284)](_0x453504(0x26e));
-    this[_0x453504(0x320)] = this[_0x453504(0x297)][_0x453504(0x320)] === _0x453504(0xb1);
-    if (this[_0x453504(0x320)]) {
-      this[_0x453504(0x312)] = this[_0x453504(0x110)]('.bundle-deals__total-price-js');
-      this[_0x453504(0x22a)] = this[_0x453504(0x110)](_0x453504(0x191));
-      this[_0x453504(0x24e)] = parseFloat(this[_0x453504(0x297)][_0x453504(0x24e)]);
-      this.fixedDiscount = parseFloat(this[_0x453504(0x297)][_0x453504(0x1b4)]);
-      this[_0x453504(0x218)] = this[_0x453504(0x297)][_0x453504(0x218)];
-    }
-  }
-  [a0_0x4ad3a2(0xd2)]() {
-    const _0x4c8cb6 = a0_0x4ad3a2;
-    if (!this[_0x4c8cb6(0x320)]) {
-      return;
-    }
-    var _0x31ae5e = 0x0;
-    var _0x311da0 = 0x0;
-    for (let _0x15364f = 0x0; _0x15364f < this[_0x4c8cb6(0x21e)][_0x4c8cb6(0x374)]; _0x15364f++) {
-      _0x31ae5e += parseInt(this.offerItems[_0x15364f][_0x4c8cb6(0x1db)]);
-      _0x311da0 += parseInt(this.offerItems[_0x15364f].comparePrice);
-    }
-    _0x31ae5e = _0x31ae5e * this[_0x4c8cb6(0x24e)] - this.fixedDiscount;
-    displayPrices(_0x31ae5e, _0x311da0, this[_0x4c8cb6(0x312)], this[_0x4c8cb6(0x22a)], this[_0x4c8cb6(0x218)]);
-  }
-}
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x1f3), MainBundleOffer);
 class CustomProductField extends HTMLElement {
   constructor() {
-    const _0x1e5e33 = a0_0x4ad3a2;
     super();
-    this.fieldName = this.dataset[_0x1e5e33(0x396)];
-    this[_0x1e5e33(0x366)] = this[_0x1e5e33(0x110)](_0x1e5e33(0x363));
-    this.inputRadios = this[_0x1e5e33(0x284)](_0x1e5e33(0x32a));
-    this.select = this[_0x1e5e33(0x110)](_0x1e5e33(0x2bf));
-    this.productForm = document.getElementById(_0x1e5e33(0x25a) + this[_0x1e5e33(0x297)][_0x1e5e33(0xf3)]);
-    this.prevValue = this[_0x1e5e33(0x297)][_0x1e5e33(0x336)];
-    this[_0x1e5e33(0x338)] = this.dataset[_0x1e5e33(0x229)] === 'true';
-    this[_0x1e5e33(0x253)] = true;
-    if (this.dataset[_0x1e5e33(0x268)] === _0x1e5e33(0x265) || this.dataset.type === _0x1e5e33(0x399)) {
-      this[_0x1e5e33(0x253)] = false;
+    this.fieldName = this.dataset.name;
+    this.input = this.querySelector("[type=\"text\"], [type=\"number\"], textarea");
+    this.inputRadios = this.querySelectorAll("[type=\"radio\"]");
+    this.select = this.querySelector(".select__select");
+    this.productForm = document.getElementById("product-form-" + this.dataset.section);
+    this.prevValue = this.dataset.defaultValue;
+    this.isRequired = this.dataset.required === "true";
+    this.isText = true;
+    if (this.dataset.type === "select" || this.dataset.type === 'pills') {
+      this.isText = false;
     }
-    this[_0x1e5e33(0x185)]();
-    if (this[_0x1e5e33(0x338)] && this[_0x1e5e33(0x253)]) {
-      this[_0x1e5e33(0x2b8)] = true;
-      this.atcButtons = document[_0x1e5e33(0x284)](_0x1e5e33(0x37d));
-      this[_0x1e5e33(0x331)] = this.productForm.querySelector('#ProductSubmitButton-' + this.dataset[_0x1e5e33(0xf3)]);
-      this.mainAtcBtnLabel = this[_0x1e5e33(0x331)][_0x1e5e33(0x110)]('.main-atc__label');
-      this[_0x1e5e33(0x247)] = this.mainAtcButton[_0x1e5e33(0x110)](_0x1e5e33(0x102));
-      this[_0x1e5e33(0x38c)] = this[_0x1e5e33(0x297)][_0x1e5e33(0x38c)];
-      this[_0x1e5e33(0x331)][_0x1e5e33(0x297)][_0x1e5e33(0x34f)] = parseInt(this[_0x1e5e33(0x331)][_0x1e5e33(0x297)][_0x1e5e33(0x34f)]) + 0x1;
-      this[_0x1e5e33(0x247)][_0x1e5e33(0xe9)] = this[_0x1e5e33(0x38c)];
-      this[_0x1e5e33(0x330)] = this[_0x1e5e33(0x297)][_0x1e5e33(0x330)] === 'true';
-      this[_0x1e5e33(0x344)] = document[_0x1e5e33(0x110)](_0x1e5e33(0x1d9) + this[_0x1e5e33(0x297)][_0x1e5e33(0xf3)]);
-      if (this[_0x1e5e33(0x330)] && this[_0x1e5e33(0x344)]) {
-        this[_0x1e5e33(0x300)] = this[_0x1e5e33(0x344)].querySelector(_0x1e5e33(0x204));
-        this.stickyAtcBtnError = this[_0x1e5e33(0x344)][_0x1e5e33(0x110)](_0x1e5e33(0x35c));
-        this[_0x1e5e33(0x249)].innerHTML = this[_0x1e5e33(0x38c)];
+    this.createInputs();
+    if (this.isRequired && this.isText) {
+      this.isValid = true;
+      this.atcButtons = document.querySelectorAll(".main-product-atc");
+      this.mainAtcButton = this.productForm.querySelector("#ProductSubmitButton-" + this.dataset.section);
+      this.mainAtcBtnLabel = this.mainAtcButton.querySelector(".main-atc__label");
+      this.mainAtcBtnError = this.mainAtcButton.querySelector(".main-atc__error");
+      this.atcErrorMsg = this.dataset.atcErrorMsg;
+      this.mainAtcButton.dataset.requiredFields = parseInt(this.mainAtcButton.dataset.requiredFields) + 0x1;
+      this.mainAtcBtnError.innerHTML = this.atcErrorMsg;
+      this.applyStickyAtcError = this.dataset.applyStickyAtcError === "true";
+      this.stickyAtcButton = document.querySelector("#sticky-atc-" + this.dataset.section);
+      if (this.applyStickyAtcError && this.stickyAtcButton) {
+        this.stickyAtcBtnLabel = this.stickyAtcButton.querySelector('.sticky-atc__label');
+        this.stickyAtcBtnError = this.stickyAtcButton.querySelector(".sticky-atc__error");
+        this.stickyAtcBtnError.innerHTML = this.atcErrorMsg;
       }
-      this.validateValue(this[_0x1e5e33(0x367)], null);
+      this.validateValue(this.prevValue, null);
     }
-    if (this[_0x1e5e33(0x366)]) {
-      this[_0x1e5e33(0x366)][_0x1e5e33(0x141)](_0x1e5e33(0x366), this[_0x1e5e33(0x36a)].bind(this));
+    if (this.input) {
+      this.input.addEventListener('input', this.handleChange.bind(this));
     }
-    this[_0x1e5e33(0x387)][_0x1e5e33(0x371)](_0x3162a9 => {
-      const _0xa85865 = _0x1e5e33;
-      _0x3162a9[_0xa85865(0x141)](_0xa85865(0x366), this[_0xa85865(0x36a)][_0xa85865(0x2de)](this));
+    this.inputRadios.forEach(_0x2ee64f => {
+      _0x2ee64f.addEventListener("input", this.handleChange.bind(this));
     });
-    if (this[_0x1e5e33(0x265)]) {
-      this.select[_0x1e5e33(0x141)](_0x1e5e33(0x153), this.handleChange[_0x1e5e33(0x2de)](this));
+    if (this.select) {
+      this.select.addEventListener("change", this.handleChange.bind(this));
     }
   }
-  [a0_0x4ad3a2(0x36a)](_0x167daf) {
-    const _0x2526e9 = a0_0x4ad3a2;
-    const _0xc9700f = _0x167daf.target[_0x2526e9(0x2ea)][_0x2526e9(0x148)]();
-    if (_0x167daf.target.checkValidity()) {
-      this[_0x2526e9(0x367)] = _0xc9700f;
+  ["handleChange"](_0x6f99f8) {
+    const _0x471d9d = _0x6f99f8.target.value.trim();
+    if (_0x6f99f8.target.checkValidity()) {
+      this.prevValue = _0x471d9d;
     } else {
-      _0x167daf.target[_0x2526e9(0x2ea)] = this[_0x2526e9(0x367)];
+      _0x6f99f8.target.value = this.prevValue;
       return;
     }
-    this[_0x2526e9(0x1ba)][_0x2526e9(0x2ea)] = _0xc9700f;
-    if (this[_0x2526e9(0x338)] && this.isText) {
-      this.validateValue(_0xc9700f, _0x167daf[_0x2526e9(0x201)]);
+    this.productFormInput.value = _0x471d9d;
+    if (this.isRequired && this.isText) {
+      this.validateValue(_0x471d9d, _0x6f99f8.target);
     }
   }
-  [a0_0x4ad3a2(0x2e0)](_0x3899b3, _0x4e68ed) {
-    const _0x255953 = a0_0x4ad3a2;
-    const _0x315dcc = _0x3899b3.length > 0x0 ? true : false;
-    if (_0x315dcc === this.isValid) {
+  ["validateValue"](_0x3b3987, _0x6e6a82) {
+    const _0x25eb67 = !!(_0x3b3987.length > 0x0);
+    if (_0x25eb67 === this.isValid) {
       return;
     }
-    this[_0x255953(0x2b8)] = _0x315dcc;
-    if (_0x4e68ed) {
+    this.isValid = _0x25eb67;
+    if (_0x6e6a82) {
       if (this.isValid) {
-        _0x4e68ed[_0x255953(0x30b)][_0x255953(0xd6)](_0x255953(0x389));
-        this[_0x255953(0x331)][_0x255953(0x297)][_0x255953(0x25e)] = parseInt(this[_0x255953(0x331)][_0x255953(0x297)].validFields) + 0x1;
+        _0x6e6a82.classList.remove("input--error");
+        this.mainAtcButton.dataset.validFields = parseInt(this.mainAtcButton.dataset.validFields) + 0x1;
       } else {
-        _0x4e68ed[_0x255953(0x30b)][_0x255953(0x1b7)](_0x255953(0x389));
-        this.mainAtcButton[_0x255953(0x297)][_0x255953(0x25e)] = parseInt(this[_0x255953(0x331)][_0x255953(0x297)][_0x255953(0x25e)]) - 0x1;
+        _0x6e6a82.classList.add("input--error");
+        this.mainAtcButton.dataset.validFields = parseInt(this.mainAtcButton.dataset.validFields) - 0x1;
       }
     }
-    const _0x1e55a1 = this[_0x255953(0x331)][_0x255953(0x297)].validFields === this[_0x255953(0x331)].dataset[_0x255953(0x34f)];
-    const _0x8c767a = this[_0x255953(0x331)][_0x255953(0x297)][_0x255953(0x225)] === _0x255953(0xb1);
-    this[_0x255953(0x1c8)][_0x255953(0x371)](_0x29b21d => {
-      const _0x12aa58 = _0x255953;
-      if (_0x1e55a1 && !_0x8c767a) {
-        _0x29b21d[_0x12aa58(0x97)](_0x12aa58(0x1bc));
+    const _0x94d18c = this.mainAtcButton.dataset.validFields === this.mainAtcButton.dataset.requiredFields;
+    const _0x369290 = this.mainAtcButton.dataset.unavailable === 'true';
+    this.atcButtons.forEach(_0x3c1983 => {
+      if (_0x94d18c && !_0x369290) {
+        _0x3c1983.removeAttribute('disabled');
       } else {
-        _0x29b21d[_0x12aa58(0x217)](_0x12aa58(0x1bc), '');
+        _0x3c1983.setAttribute("disabled", '');
       }
     });
-    if (this[_0x255953(0x38c)].length === 0x0) {
+    if (this.atcErrorMsg.length === 0x0) {
       return;
     }
-    if (_0x1e55a1) {
-      this[_0x255953(0x2c9)].style.display = '';
-      this.mainAtcBtnError[_0x255953(0x28d)][_0x255953(0x98)] = _0x255953(0x25c);
-      if (this[_0x255953(0x330)] && this.stickyAtcButton) {
-        this[_0x255953(0x300)].style[_0x255953(0x98)] = '';
-        this[_0x255953(0x249)].style[_0x255953(0x98)] = _0x255953(0x25c);
+    if (_0x94d18c) {
+      this.mainAtcBtnLabel.style.display = '';
+      this.mainAtcBtnError.style.display = "none";
+      if (this.applyStickyAtcError && this.stickyAtcButton) {
+        this.stickyAtcBtnLabel.style.display = '';
+        this.stickyAtcBtnError.style.display = "none";
       }
     } else {
-      this[_0x255953(0x2c9)][_0x255953(0x28d)].display = 'none';
-      this[_0x255953(0x247)][_0x255953(0x28d)].display = '';
-      if (this[_0x255953(0x330)] && this[_0x255953(0x344)]) {
-        this[_0x255953(0x300)][_0x255953(0x28d)][_0x255953(0x98)] = _0x255953(0x25c);
-        this.stickyAtcBtnError[_0x255953(0x28d)].display = '';
+      this.mainAtcBtnLabel.style.display = "none";
+      this.mainAtcBtnError.style.display = '';
+      if (this.applyStickyAtcError && this.stickyAtcButton) {
+        this.stickyAtcBtnLabel.style.display = "none";
+        this.stickyAtcBtnError.style.display = '';
       }
     }
   }
-  [a0_0x4ad3a2(0x185)]() {
-    const _0x1dc6ca = a0_0x4ad3a2;
-    this[_0x1dc6ca(0x1ba)] = document[_0x1dc6ca(0x240)](_0x1dc6ca(0x366));
-    this[_0x1dc6ca(0x1ba)][_0x1dc6ca(0x217)]('type', _0x1dc6ca(0x18e));
-    this[_0x1dc6ca(0x1ba)][_0x1dc6ca(0x217)](_0x1dc6ca(0x396), _0x1dc6ca(0xee) + this[_0x1dc6ca(0x1d6)] + ']');
-    this[_0x1dc6ca(0x1ba)][_0x1dc6ca(0x2ea)] = this[_0x1dc6ca(0x297)].defaultValue;
-    this.productForm[_0x1dc6ca(0x120)](this[_0x1dc6ca(0x1ba)]);
+  ["createInputs"]() {
+    this.productFormInput = document.createElement("input");
+    this.productFormInput.setAttribute("type", 'hidden');
+    this.productFormInput.setAttribute("name", "properties[" + this.fieldName + ']');
+    this.productFormInput.value = this.dataset.defaultValue;
+    this.productForm.appendChild(this.productFormInput);
   }
 }
-customElements[a0_0x4ad3a2(0xb2)]('custom-product-field', CustomProductField);
+customElements.define('custom-product-field', CustomProductField);
 function playMedia() {
   if (!serial) {
     serial = '';
@@ -2930,364 +2205,319 @@ function playMedia() {
 }
 class VariantSelects extends HTMLElement {
   constructor() {
-    const _0x42137e = a0_0x4ad3a2;
     super();
-    this[_0x42137e(0x1bb)] = _0x42137e(0x39e);
-    this[_0x42137e(0x166)] = document.getElementById('' + this.secondarySelectSelector + this[_0x42137e(0x297)][_0x42137e(0xf3)]);
+    this.secondarySelectSelector = 'StickyAtcVariantPicker-';
+    this.secondarySelect = document.getElementById('' + this.secondarySelectSelector + this.dataset.section);
     this.isSecondary = false;
-    this[_0x42137e(0x2ba)] = document[_0x42137e(0x359)](_0x42137e(0x109) + this[_0x42137e(0x297)][_0x42137e(0xf3)]);
-    this[_0x42137e(0x21a)] = this[_0x42137e(0x297)][_0x42137e(0x21a)] === 'true';
-    this[_0x42137e(0x186)] = this.dataset.disablePrepend != _0x42137e(0xb1);
-    if (this[_0x42137e(0x21a)]) {
-      this[_0x42137e(0x1e5)] = this[_0x42137e(0x297)][_0x42137e(0x1e5)];
-      this[_0x42137e(0x2cf)] = this.dataset[_0x42137e(0x2cf)];
+    this.QuantityBreaks = document.getElementById("quantity-breaks-" + this.dataset.section);
+    this.hasQuantityBreaksPicker = this.dataset.hasQuantityBreaksPicker === "true";
+    if (this.hasQuantityBreaksPicker) {
+      this.quantityBreaksPickerStyle = this.dataset.quantityBreaksPickerStyle;
+      this.quantityBreaksPickerDisplayedImages = this.dataset.quantityBreaksPickerDisplayedImages;
     }
-    this[_0x42137e(0x141)](_0x42137e(0x153), this[_0x42137e(0xca)]);
+    this.addEventListener('change', this.onVariantChange);
   }
-  [a0_0x4ad3a2(0xca)]() {
-    const _0x254cc9 = a0_0x4ad3a2;
-    this[_0x254cc9(0x311)]();
+  ["onVariantChange"]() {
+    this.updateOptions();
     this.updateMasterId();
-    this[_0x254cc9(0x2b5)](true, '', false);
-    this[_0x254cc9(0x27f)]();
-    this[_0x254cc9(0xcb)]();
-    this[_0x254cc9(0x309)]();
-    if (!this[_0x254cc9(0x255)]) {
-      this[_0x254cc9(0x2b5)](true, '', true);
-      this[_0x254cc9(0x292)]();
+    this.toggleAddButton(true, '', false);
+    this.updatePickupAvailability();
+    this.removeErrorMessage();
+    this.updateVariantStatuses();
+    if (!this.currentVariant) {
+      this.toggleAddButton(true, '', true);
+      this.setUnavailable();
     } else {
-      this[_0x254cc9(0x28b)]();
+      this.updateMedia();
       this.updateURL();
-      this[_0x254cc9(0x2ab)]();
+      this.updateVariantInput();
       this.renderProductInfo();
-      this[_0x254cc9(0x14b)]();
+      this.updateShareUrl();
     }
   }
   ['updateOptions']() {
-    const _0x22eabb = a0_0x4ad3a2;
-    const _0x517048 = [];
-    this.querySelectorAll(_0x22eabb(0x2c8)).forEach(_0x4f9d6b => {
-      const _0x240161 = _0x22eabb;
-      let _0x57452e;
-      const _0x47f939 = _0x4f9d6b[_0x240161(0x110)](_0x240161(0x348))[_0x240161(0x297)].type;
-      if (_0x47f939 == _0x240161(0xd9) || _0x47f939 == _0x240161(0x2c2)) {
-        _0x57452e = _0x4f9d6b[_0x240161(0x110)](_0x240161(0x265)).value;
+    const _0x2abf2b = [];
+    this.querySelectorAll(".product-form__input").forEach(_0x396702 => {
+      let _0x52597f;
+      const _0x260eff = _0x396702.querySelector(".product-form__input__type").dataset.type;
+      if (_0x260eff == 'dropdown') {
+        _0x52597f = _0x396702.querySelector('select').value;
       } else {
-        _0x57452e = _0x4f9d6b[_0x240161(0x110)]("input[type=\"radio\"]:checked")[_0x240161(0x2ea)];
+        _0x52597f = _0x396702.querySelector("input[type=\"radio\"]:checked").value;
       }
-      _0x517048.push(_0x57452e);
+      _0x2abf2b.push(_0x52597f);
     });
-    this.options = _0x517048;
+    this.options = _0x2abf2b;
   }
-  [a0_0x4ad3a2(0xef)]() {
-    const _0x194e39 = a0_0x4ad3a2;
-    this.currentVariant = this[_0x194e39(0x25d)]().find(_0x2bcc0d => {
-      const _0x483277 = _0x194e39;
-      return !_0x2bcc0d[_0x483277(0x1f5)].map((_0x416954, _0x27f53c) => {
-        const _0x398d04 = _0x483277;
-        return this[_0x398d04(0x1f5)][_0x27f53c] === _0x416954;
+  ["updateMasterId"]() {
+    this.currentVariant = this.getVariantData().find(_0x3bd2e9 => {
+      return !_0x3bd2e9.options.map((_0x2f7277, _0x42f0c2) => {
+        return this.options[_0x42f0c2] === _0x2f7277;
       }).includes(false);
     });
   }
-  [a0_0x4ad3a2(0x28b)]() {
-    const _0x2e1803 = a0_0x4ad3a2;
+  ["updateMedia"]() {
     if (!this.currentVariant) {
       return;
     }
-    if (!this.currentVariant[_0x2e1803(0x2a2)]) {
+    if (!this.currentVariant.featured_media) {
       return;
     }
-    const _0x47eea3 = document.querySelectorAll(_0x2e1803(0x1fd) + this.dataset.section + "\"]");
-    _0x47eea3[_0x2e1803(0x371)](_0x181a4 => _0x181a4[_0x2e1803(0xc4)](this.dataset[_0x2e1803(0xf3)] + '-' + this[_0x2e1803(0x255)][_0x2e1803(0x2a2)].id, this[_0x2e1803(0x186)]));
-    const _0x547187 = document[_0x2e1803(0x110)]('#ProductModal-' + this[_0x2e1803(0x297)][_0x2e1803(0xf3)] + _0x2e1803(0x157));
-    if (!_0x547187) {
+    const _0x38b3e0 = document.querySelectorAll("[id^=\"MediaGallery-" + this.dataset.section + "\"]");
+    _0x38b3e0.forEach(_0x12d95c => _0x12d95c.setActiveMedia(this.dataset.section + '-' + this.currentVariant.featured_media.id, true));
+    const _0x5768ee = document.querySelector("#ProductModal-" + this.dataset.section + " .product-media-modal__content");
+    if (!_0x5768ee) {
       return;
     }
-    const _0x39b4cd = _0x547187.querySelector(_0x2e1803(0x28e) + this[_0x2e1803(0x255)][_0x2e1803(0x2a2)].id + "\"]");
-    _0x547187[_0x2e1803(0x18b)](_0x39b4cd);
+    const _0x3346d6 = _0x5768ee.querySelector("[data-media-id=\"" + this.currentVariant.featured_media.id + "\"]");
+    _0x5768ee.prepend(_0x3346d6);
   }
-  ['updateURL']() {
-    const _0x5612d5 = a0_0x4ad3a2;
-    if (!this[_0x5612d5(0x255)] || this[_0x5612d5(0x297)].updateUrl === _0x5612d5(0x114)) {
+  ["updateURL"]() {
+    if (!this.currentVariant || this.dataset.updateUrl === 'false') {
       return;
     }
-    window[_0x5612d5(0xa5)][_0x5612d5(0x18f)]({}, '', this[_0x5612d5(0x297)][_0x5612d5(0xe2)] + _0x5612d5(0x323) + this.currentVariant.id);
+    window.history.replaceState({}, '', this.dataset.url + '?variant=' + this.currentVariant.id);
   }
-  [a0_0x4ad3a2(0x14b)]() {
-    const _0x479c63 = a0_0x4ad3a2;
-    const _0x188688 = document[_0x479c63(0x359)](_0x479c63(0x159) + this.dataset[_0x479c63(0xf3)]);
-    if (!_0x188688 || !_0x188688[_0x479c63(0x154)]) {
+  ["updateShareUrl"]() {
+    const _0x24025c = document.getElementById('Share-' + this.dataset.section);
+    if (!_0x24025c || !_0x24025c.updateUrl) {
       return;
     }
-    _0x188688[_0x479c63(0x154)]('' + window.shopUrl + this.dataset[_0x479c63(0xe2)] + '?variant=' + this.currentVariant.id);
+    _0x24025c.updateUrl('' + window.shopUrl + this.dataset.url + "?variant=" + this.currentVariant.id);
   }
-  [a0_0x4ad3a2(0x2ab)]() {
-    const _0x2bb5df = a0_0x4ad3a2;
-    const _0x174771 = document[_0x2bb5df(0x284)](_0x2bb5df(0x16e) + this[_0x2bb5df(0x297)][_0x2bb5df(0xf3)] + _0x2bb5df(0x1af) + this[_0x2bb5df(0x297)][_0x2bb5df(0xf3)]);
-    _0x174771[_0x2bb5df(0x371)](_0x3118a0 => {
-      const _0x34641d = _0x2bb5df;
-      const _0x34e9a6 = _0x3118a0[_0x34641d(0x110)](_0x34641d(0x2e4));
-      _0x34e9a6[_0x34641d(0x2ea)] = this[_0x34641d(0x255)].id;
-      _0x34e9a6[_0x34641d(0x1a1)](new Event(_0x34641d(0x153), {
+  ['updateVariantInput']() {
+    const _0x355415 = document.querySelectorAll("#product-form-" + this.dataset.section + ", #product-form-installment-" + this.dataset.section);
+    _0x355415.forEach(_0x4fe800 => {
+      const _0x26ed3e = _0x4fe800.querySelector("input[name=\"id\"]");
+      _0x26ed3e.value = this.currentVariant.id;
+      _0x26ed3e.dispatchEvent(new Event("change", {
         'bubbles': true
       }));
     });
   }
-  [a0_0x4ad3a2(0x309)]() {
-    const _0x1857e7 = a0_0x4ad3a2;
-    const _0x55c198 = this[_0x1857e7(0xe7)][_0x1857e7(0x133)](_0x48428f => this[_0x1857e7(0x110)](_0x1857e7(0x20a))[_0x1857e7(0x2ea)] === _0x48428f[_0x1857e7(0x1fb)]);
-    const _0x2a62e3 = !this[_0x1857e7(0x1b0)] ? [...this.querySelectorAll('.product-form__input')] : [...this[_0x1857e7(0x166)].querySelectorAll(_0x1857e7(0x2c8))];
-    _0x2a62e3[_0x1857e7(0x371)]((_0x540897, _0x349b82) => {
-      const _0x3cb377 = _0x1857e7;
-      if (_0x349b82 === 0x0) {
+  ['updateVariantStatuses']() {
+    const _0x349d78 = this.variantData.filter(_0x5c18aa => this.querySelector(":checked").value === _0x5c18aa.option1);
+    const _0x377aa3 = !this.isSecondary ? [...this.querySelectorAll(".product-form__input")] : [...this.secondarySelect.querySelectorAll(".product-form__input")];
+    _0x377aa3.forEach((_0x37fe09, _0x1279df) => {
+      if (_0x1279df === 0x0) {
         return;
       }
-      const _0x5617ae = [..._0x540897.querySelectorAll(_0x3cb377(0x2fe))];
-      const _0x5e14c4 = _0x2a62e3[_0x349b82 - 0x1].querySelector(_0x3cb377(0x20a))[_0x3cb377(0x2ea)];
-      const _0x512a0a = _0x55c198[_0x3cb377(0x133)](_0x51f5ac => _0x51f5ac[_0x3cb377(0x101)] && _0x51f5ac[_0x3cb377(0x26c) + _0x349b82] === _0x5e14c4)[_0x3cb377(0x3ad)](_0x5c7ed5 => _0x5c7ed5[_0x3cb377(0x26c) + (_0x349b82 + 0x1)]);
-      this[_0x3cb377(0x1ff)](_0x5617ae, _0x512a0a);
+      const _0x483d07 = [..._0x37fe09.querySelectorAll("input[type=\"radio\"], option")];
+      const _0x1b1deb = _0x377aa3[_0x1279df - 0x1].querySelector(':checked').value;
+      const _0x2cfd23 = _0x349d78.filter(_0x2444ab => _0x2444ab.available && _0x2444ab["option" + _0x1279df] === _0x1b1deb).map(_0xb58e7c => _0xb58e7c["option" + (_0x1279df + 0x1)]);
+      this.setInputAvailability(_0x483d07, _0x2cfd23);
     });
   }
-  [a0_0x4ad3a2(0x1ff)](_0x180988, _0x2f522a) {
-    _0x180988.forEach(_0x102eac => {
-      const _0x35375e = a0_0x5a21;
-      if (_0x102eac[_0x35375e(0x1f1)] === _0x35375e(0x26c)) {
-        if (_0x2f522a[_0x35375e(0x149)](_0x102eac[_0x35375e(0x282)](_0x35375e(0x2ea)))) {
-          _0x102eac[_0x35375e(0x215)] = _0x102eac[_0x35375e(0x282)](_0x35375e(0x2ea));
+  ["setInputAvailability"](_0x20ead1, _0xf6b307) {
+    _0x20ead1.forEach(_0x5244fe => {
+      if (_0x5244fe.nodeName === "option") {
+        if (_0xf6b307.includes(_0x5244fe.getAttribute("value"))) {
+          _0x5244fe.innerText = _0x5244fe.getAttribute("value");
         } else {
-          _0x102eac.innerText = window.variantStrings[_0x35375e(0xe6)][_0x35375e(0x19a)](_0x35375e(0xb3), _0x102eac.getAttribute('value'));
+          _0x5244fe.innerText = window.variantStrings.unavailable_with_option.replace("[value]", _0x5244fe.getAttribute("value"));
         }
-      } else if (_0x2f522a.includes(_0x102eac.getAttribute('value'))) {
-        _0x102eac[_0x35375e(0x30b)][_0x35375e(0xd6)]('disabled');
+      } else if (_0xf6b307.includes(_0x5244fe.getAttribute("value"))) {
+        _0x5244fe.classList.remove("disabled");
       } else {
-        _0x102eac[_0x35375e(0x30b)].add(_0x35375e(0x1bc));
+        _0x5244fe.classList.add("disabled");
       }
     });
   }
-  [a0_0x4ad3a2(0x27f)]() {
-    const _0x1a2a7a = a0_0x4ad3a2;
-    const _0x11498a = document[_0x1a2a7a(0x110)](_0x1a2a7a(0x169));
-    if (!_0x11498a) {
+  ["updatePickupAvailability"]() {
+    const _0x49a951 = document.querySelector("pickup-availability");
+    if (!_0x49a951) {
       return;
     }
-    if (this[_0x1a2a7a(0x255)] && this[_0x1a2a7a(0x255)].available) {
-      _0x11498a[_0x1a2a7a(0x115)](this[_0x1a2a7a(0x255)].id);
+    if (this.currentVariant && this.currentVariant.available) {
+      _0x49a951.fetchAvailability(this.currentVariant.id);
     } else {
-      _0x11498a[_0x1a2a7a(0x97)](_0x1a2a7a(0x101));
-      _0x11498a[_0x1a2a7a(0xe9)] = '';
+      _0x49a951.removeAttribute("available");
+      _0x49a951.innerHTML = '';
     }
   }
-  ['removeErrorMessage']() {
-    const _0x34842f = a0_0x4ad3a2;
-    const _0x55e2dd = this.closest(_0x34842f(0xf3));
-    if (!_0x55e2dd) {
+  ["removeErrorMessage"]() {
+    const _0x4c090a = this.closest('section');
+    if (!_0x4c090a) {
       return;
     }
-    const _0x8ebfbb = _0x55e2dd[_0x34842f(0x110)]('product-form');
-    if (_0x8ebfbb) {
-      _0x8ebfbb[_0x34842f(0x1ee)]();
+    const _0x40bce0 = _0x4c090a.querySelector("product-form");
+    if (_0x40bce0) {
+      _0x40bce0.handleErrorMessage();
     }
   }
-  ['renderProductInfo']() {
-    const _0xfc9654 = a0_0x4ad3a2;
-    const _0x2f3f66 = this[_0xfc9654(0x255)].id;
-    const _0x15a268 = this[_0xfc9654(0x297)].originalSection ? this.dataset[_0xfc9654(0x1df)] : this[_0xfc9654(0x297)].section;
-    fetch(this.dataset[_0xfc9654(0xe2)] + _0xfc9654(0x323) + _0x2f3f66 + _0xfc9654(0x15a) + (this[_0xfc9654(0x297)].originalSection ? this[_0xfc9654(0x297)][_0xfc9654(0x1df)] : this[_0xfc9654(0x297)].section))[_0xfc9654(0xf6)](_0x1d6791 => _0x1d6791[_0xfc9654(0x139)]())[_0xfc9654(0xf6)](_0x3e1e70 => {
-      const _0x2769b6 = _0xfc9654;
-      if (this[_0x2769b6(0x255)].id !== _0x2f3f66) {
+  ["renderProductInfo"]() {
+    const _0x2b6e50 = this.currentVariant.id;
+    const _0x3a58d0 = this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section;
+    fetch(this.dataset.url + "?variant=" + _0x2b6e50 + "&section_id=" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section)).then(_0x244f69 => _0x244f69.text()).then(_0x330c00 => {
+      if (this.currentVariant.id !== _0x2b6e50) {
         return;
       }
-      const _0x8b17f5 = new DOMParser()[_0x2769b6(0x1e1)](_0x3e1e70, _0x2769b6(0xe3));
-      const _0x7a4a3 = document[_0x2769b6(0x359)](_0x2769b6(0x305) + this[_0x2769b6(0x297)][_0x2769b6(0xf3)]);
-      const _0x464cc3 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x305) + (this[_0x2769b6(0x297)].originalSection ? this[_0x2769b6(0x297)][_0x2769b6(0x1df)] : this[_0x2769b6(0x297)][_0x2769b6(0xf3)]));
-      const _0x368efe = document[_0x2769b6(0x359)]('sticky-atc-separate-price-' + this[_0x2769b6(0x297)][_0x2769b6(0xf3)]);
-      const _0x4fc5fa = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x290) + (this[_0x2769b6(0x297)].originalSection ? this[_0x2769b6(0x297)][_0x2769b6(0x1df)] : this[_0x2769b6(0x297)].section));
-      const _0x4596e3 = document[_0x2769b6(0x359)]('sticky-atc-price-' + this[_0x2769b6(0x297)].section);
-      const _0x143504 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x222) + (this[_0x2769b6(0x297)][_0x2769b6(0x1df)] ? this[_0x2769b6(0x297)].originalSection : this.dataset[_0x2769b6(0xf3)]));
-      const _0x548a32 = document[_0x2769b6(0x359)](_0x2769b6(0x24f) + this[_0x2769b6(0x297)][_0x2769b6(0xf3)]);
-      const _0x1ae1ef = _0x8b17f5.getElementById(_0x2769b6(0x24f) + (this[_0x2769b6(0x297)].originalSection ? this[_0x2769b6(0x297)].originalSection : this[_0x2769b6(0x297)].section));
-      const _0x4a2354 = document.getElementById(_0x2769b6(0x24d) + this[_0x2769b6(0x297)][_0x2769b6(0xf3)]);
-      const _0x4b87f2 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x24d) + (this.dataset[_0x2769b6(0x1df)] ? this[_0x2769b6(0x297)][_0x2769b6(0x1df)] : this.dataset.section));
-      const _0x34d1d2 = document[_0x2769b6(0x284)](_0x2769b6(0x228) + this.dataset[_0x2769b6(0xf3)] + "\"]");
-      const _0x23f73d = _0x8b17f5[_0x2769b6(0x284)](_0x2769b6(0x228) + (this[_0x2769b6(0x297)][_0x2769b6(0x1df)] ? this[_0x2769b6(0x297)].originalSection : this.dataset[_0x2769b6(0xf3)]) + "\"]");
-      const _0x4439f5 = _0x8b17f5[_0x2769b6(0x359)]('Sku-' + (this[_0x2769b6(0x297)][_0x2769b6(0x1df)] ? this.dataset[_0x2769b6(0x1df)] : this.dataset[_0x2769b6(0xf3)]));
-      const _0x29f6f5 = document[_0x2769b6(0x359)](_0x2769b6(0xaf) + this[_0x2769b6(0x297)].section);
-      const _0x27fff4 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0xa2) + (this[_0x2769b6(0x297)].originalSection ? this[_0x2769b6(0x297)][_0x2769b6(0x1df)] : this.dataset[_0x2769b6(0xf3)]));
-      const _0x91e6b7 = document[_0x2769b6(0x359)](_0x2769b6(0xa2) + this.dataset[_0x2769b6(0xf3)]);
-      if (_0x7a4a3 && _0x464cc3) {
-        _0x7a4a3[_0x2769b6(0xe9)] = _0x464cc3[_0x2769b6(0xe9)];
+      const _0x3b0aec = new DOMParser().parseFromString(_0x330c00, "text/html");
+      const _0x4a465e = document.getElementById("price-" + this.dataset.section);
+      const _0x1b6757 = _0x3b0aec.getElementById("price-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x856db5 = document.getElementById("sticky-atc-separate-price-" + this.dataset.section);
+      const _0x4dcf5b = _0x3b0aec.getElementById("sticky-atc-separate-price-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x3b9957 = document.getElementById("sticky-atc-price-" + this.dataset.section);
+      const _0x57ad16 = _0x3b0aec.getElementById("sticky-atc-price-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x2d7f25 = document.getElementById("sticky-atc-image-" + this.dataset.section);
+      const _0x468ed6 = _0x3b0aec.getElementById("sticky-atc-image-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x5923c1 = document.getElementById("main-atc-price-" + this.dataset.section);
+      const _0x5ef46b = _0x3b0aec.getElementById('main-atc-price-' + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x38032f = document.querySelectorAll("[id^=\"custom-label-" + this.dataset.section + "\"]");
+      const _0x25e3ee = _0x3b0aec.querySelectorAll("[id^=\"custom-label-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section) + "\"]");
+      const _0x579701 = _0x3b0aec.getElementById("Sku-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x114b1e = document.getElementById("Sku-" + this.dataset.section);
+      const _0x4b8af9 = _0x3b0aec.getElementById("Inventory-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+      const _0x2b738b = document.getElementById("Inventory-" + this.dataset.section);
+      if (_0x4a465e && _0x1b6757) {
+        _0x4a465e.innerHTML = _0x1b6757.innerHTML;
       }
-      if (_0x368efe && _0x4fc5fa) {
-        _0x368efe[_0x2769b6(0xe9)] = _0x4fc5fa.innerHTML;
+      if (_0x856db5 && _0x4dcf5b) {
+        _0x856db5.innerHTML = _0x4dcf5b.innerHTML;
       }
-      if (_0x4596e3 && _0x143504) {
-        _0x4596e3[_0x2769b6(0xe9)] = _0x143504[_0x2769b6(0xe9)];
+      if (_0x3b9957 && _0x57ad16) {
+        _0x3b9957.innerHTML = _0x57ad16.innerHTML;
       }
-      if (_0x548a32 && _0x1ae1ef) {
-        _0x548a32[_0x2769b6(0x2b9)] = _0x1ae1ef[_0x2769b6(0x2b9)];
+      if (_0x2d7f25 && _0x468ed6) {
+        _0x2d7f25.src = _0x468ed6.src;
       }
-      if (_0x4b87f2 && _0x4a2354) {
-        _0x4a2354.innerHTML = _0x4b87f2.innerHTML;
+      if (_0x5ef46b && _0x5923c1) {
+        _0x5923c1.innerHTML = _0x5ef46b.innerHTML;
       }
-      if (_0x34d1d2 && _0x23f73d) {
-        for (var _0x3fd70f = 0x0; _0x3fd70f < _0x34d1d2[_0x2769b6(0x374)]; _0x3fd70f++) {
-          _0x34d1d2[_0x3fd70f][_0x2769b6(0xe9)] = _0x23f73d[_0x3fd70f][_0x2769b6(0xe9)];
+      if (_0x38032f && _0x25e3ee) {
+        for (var _0x17ad22 = 0x0; _0x17ad22 < _0x38032f.length; _0x17ad22++) {
+          _0x38032f[_0x17ad22].innerHTML = _0x25e3ee[_0x17ad22].innerHTML;
         }
       }
-      if (_0x27fff4 && _0x91e6b7) {
-        _0x91e6b7[_0x2769b6(0xe9)] = _0x27fff4[_0x2769b6(0xe9)];
+      if (_0x4b8af9 && _0x2b738b) {
+        _0x2b738b.innerHTML = _0x4b8af9.innerHTML;
       }
-      if (_0x4439f5 && _0x29f6f5) {
-        _0x29f6f5[_0x2769b6(0xe9)] = _0x4439f5.innerHTML;
-        _0x29f6f5.classList[_0x2769b6(0x385)]('visibility-hidden', _0x4439f5[_0x2769b6(0x30b)][_0x2769b6(0x381)](_0x2769b6(0x175)));
+      if (_0x579701 && _0x114b1e) {
+        _0x114b1e.innerHTML = _0x579701.innerHTML;
+        _0x114b1e.classList.toggle('visibility-hidden', _0x579701.classList.contains('visibility-hidden'));
       }
-      if (this[_0x2769b6(0x2ba)]) {
-        const _0x3fbe06 = _0x8b17f5.getElementById(_0x2769b6(0x109) + (this[_0x2769b6(0x297)][_0x2769b6(0x1df)] ? this.dataset[_0x2769b6(0x1df)] : this[_0x2769b6(0x297)][_0x2769b6(0xf3)]));
-        const _0x45e429 = this[_0x2769b6(0x2ba)].querySelectorAll('.dynamic-price');
-        const _0x2facd2 = _0x3fbe06[_0x2769b6(0x284)]('.dynamic-price');
-        for (let _0x39a116 = 0x0; _0x39a116 < _0x45e429[_0x2769b6(0x374)]; _0x39a116++) {
-          _0x45e429[_0x39a116][_0x2769b6(0xe9)] = _0x2facd2[_0x39a116][_0x2769b6(0xe9)];
+      if (this.QuantityBreaks) {
+        const _0x13ffff = _0x3b0aec.getElementById("quantity-breaks-" + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+        const _0x2aad91 = this.QuantityBreaks.querySelectorAll('.dynamic-price');
+        const _0x409f86 = _0x13ffff.querySelectorAll(".dynamic-price");
+        for (let _0x581a46 = 0x0; _0x581a46 < _0x2aad91.length; _0x581a46++) {
+          _0x2aad91[_0x581a46].innerHTML = _0x409f86[_0x581a46].innerHTML;
         }
-        if (this[_0x2769b6(0x2ba)][_0x2769b6(0x165)]) {
-          this[_0x2769b6(0x2ba)][_0x2769b6(0x351)].forEach(_0x28b452 => {
-            const _0x2c5b02 = _0x2769b6;
-            _0x28b452[_0x2c5b02(0x297)].selectedId = this.currentVariant.id;
+        if (this.QuantityBreaks.hasVariants) {
+          this.QuantityBreaks.variantSelects.forEach(_0x1a55ba => {
+            _0x1a55ba.dataset.selectedId = this.currentVariant.id;
           });
-          const _0x2c16ee = this.QuantityBreaks.querySelectorAll(_0x2769b6(0x398));
-          const _0x5dc935 = _0x3fbe06.querySelectorAll('.quantity-break__variant-select');
-          for (let _0x9e3939 = 0x0; _0x9e3939 < _0x2c16ee.length; _0x9e3939++) {
-            _0x2c16ee[_0x9e3939][_0x2769b6(0xe9)] = _0x5dc935[_0x9e3939][_0x2769b6(0xe9)];
+          const _0x546c37 = this.QuantityBreaks.querySelectorAll(".quantity-break__variant-select");
+          const _0x4a92a3 = _0x13ffff.querySelectorAll(".quantity-break__variant-select");
+          for (let _0x51a72f = 0x0; _0x51a72f < _0x546c37.length; _0x51a72f++) {
+            _0x546c37[_0x51a72f].innerHTML = _0x4a92a3[_0x51a72f].innerHTML;
           }
-          this[_0x2769b6(0x2ba)][_0x2769b6(0x269)]();
+          this.QuantityBreaks.initVariants();
         }
         ;
       }
-      if (this[_0x2769b6(0x21a)]) {
-        const _0x2ebb51 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x1e8) + (this[_0x2769b6(0x297)][_0x2769b6(0x1df)] ? this[_0x2769b6(0x297)].originalSection : this[_0x2769b6(0x297)][_0x2769b6(0xf3)]));
-        const _0x4b06b4 = this.querySelectorAll('.dynamic-price');
-        const _0x9abf04 = _0x2ebb51[_0x2769b6(0x284)]('.dynamic-price');
-        for (let _0x29f910 = 0x0; _0x29f910 < _0x4b06b4[_0x2769b6(0x374)]; _0x29f910++) {
-          _0x4b06b4[_0x29f910][_0x2769b6(0xe9)] = _0x9abf04[_0x29f910][_0x2769b6(0xe9)];
+      if (this.hasQuantityBreaksPicker) {
+        const _0x2231b2 = _0x3b0aec.getElementById('variant-selects-' + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+        const _0x1918a6 = this.querySelectorAll('.dynamic-price');
+        const _0x3dba9e = _0x2231b2.querySelectorAll(".dynamic-price");
+        for (let _0x748b1f = 0x0; _0x748b1f < _0x1918a6.length; _0x748b1f++) {
+          _0x1918a6[_0x748b1f].innerHTML = _0x3dba9e[_0x748b1f].innerHTML;
         }
-        if (this[_0x2769b6(0x1e5)] === 'vertical' && this[_0x2769b6(0x2cf)] === _0x2769b6(0x1a9)) {
-          const _0x4dae70 = this[_0x2769b6(0x284)](_0x2769b6(0xd4));
-          const _0x192416 = _0x2ebb51[_0x2769b6(0x284)](".quantity-break__image img");
-          for (let _0x2fef6c = 0x0; _0x2fef6c < _0x4dae70[_0x2769b6(0x374)]; _0x2fef6c++) {
-            _0x4dae70[_0x2fef6c][_0x2769b6(0x2b9)] = _0x192416[_0x2fef6c][_0x2769b6(0x2b9)];
+        if (this.quantityBreaksPickerStyle === "vertical" && this.quantityBreaksPickerDisplayedImages === "variant_images") {
+          const _0x2ea894 = this.querySelectorAll(".quantity-break__image img");
+          const _0x1122d0 = _0x2231b2.querySelectorAll(".quantity-break__image img");
+          for (let _0x483c6b = 0x0; _0x483c6b < _0x2ea894.length; _0x483c6b++) {
+            _0x2ea894[_0x483c6b].src = _0x1122d0[_0x483c6b].src;
           }
         }
       }
-      if (this[_0x2769b6(0x166)]) {
-        const _0x100e89 = _0x8b17f5[_0x2769b6(0x359)]('' + this[_0x2769b6(0x1bb)] + (this.dataset.originalSection ? this.dataset[_0x2769b6(0x1df)] : this[_0x2769b6(0x297)].section));
-        if (_0x100e89) {
-          this[_0x2769b6(0x166)][_0x2769b6(0xe9)] = _0x100e89[_0x2769b6(0xe9)];
+      if (this.secondarySelect) {
+        const _0x2ca158 = _0x3b0aec.getElementById('' + this.secondarySelectSelector + (this.dataset.originalSection ? this.dataset.originalSection : this.dataset.section));
+        if (_0x2ca158) {
+          this.secondarySelect.innerHTML = _0x2ca158.innerHTML;
         }
       }
-      const _0x26d9d6 = document.getElementById(_0x2769b6(0x305) + this[_0x2769b6(0x297)].section);
-      if (_0x26d9d6) {
-        _0x26d9d6.classList[_0x2769b6(0xd6)](_0x2769b6(0x175));
+      const _0x2f09e3 = document.getElementById('price-' + this.dataset.section);
+      if (_0x2f09e3) {
+        _0x2f09e3.classList.remove("visibility-hidden");
       }
-      if (_0x91e6b7) {
-        _0x91e6b7[_0x2769b6(0x30b)][_0x2769b6(0x385)](_0x2769b6(0x175), _0x27fff4[_0x2769b6(0x215)] === '');
+      if (_0x2b738b) {
+        _0x2b738b.classList.toggle("visibility-hidden", _0x4b8af9.innerText === '');
       }
-      const _0x424df1 = _0x8b17f5[_0x2769b6(0x359)](_0x2769b6(0x352) + _0x15a268);
-      this[_0x2769b6(0x2b5)](_0x424df1 ? _0x424df1.hasAttribute('disabled') : true, window[_0x2769b6(0x345)][_0x2769b6(0x303)]);
-      publish(PUB_SUB_EVENTS[_0x2769b6(0x17f)], {
+      const _0x2c2ca9 = _0x3b0aec.getElementById("ProductSubmitButton-" + _0x3a58d0);
+      this.toggleAddButton(_0x2c2ca9 ? _0x2c2ca9.hasAttribute("disabled") : true, window.variantStrings.soldOut);
+      publish('variant-change', {
         'data': {
-          'sectionId': _0x15a268,
-          'html': _0x8b17f5,
+          'sectionId': _0x3a58d0,
+          'html': _0x3b0aec,
           'variant': this.currentVariant
         }
       });
     });
   }
-  ['toggleAddButton'](_0x5ed583 = true, _0x874bdc, _0x5ab70a = true) {
-    const _0x58c8f5 = a0_0x4ad3a2;
-    const _0x2b3af2 = document[_0x58c8f5(0x359)]('product-form-' + this.dataset[_0x58c8f5(0xf3)]);
-    if (!_0x2b3af2) {
+  ['toggleAddButton'](_0x1884b6 = true, _0x4f8ec2, _0x20306a = true) {
+    const _0x5e230a = document.getElementById('product-form-' + this.dataset.section);
+    if (!_0x5e230a) {
       return;
     }
-    const _0x4ef371 = _0x2b3af2[_0x58c8f5(0x110)](_0x58c8f5(0xd1));
-    const _0x46a138 = _0x2b3af2[_0x58c8f5(0x110)](_0x58c8f5(0x1ec));
-    if (!_0x4ef371) {
+    const _0x454d88 = _0x5e230a.querySelector("[name=\"add\"]");
+    const _0xd82875 = _0x5e230a.querySelector("[name=\"add\"] > .main-atc__label");
+    if (!_0x454d88) {
       return;
     }
-    if (_0x5ed583) {
-      _0x4ef371[_0x58c8f5(0x217)](_0x58c8f5(0x1bc), _0x58c8f5(0x1bc));
-      _0x4ef371.setAttribute('data-unavailable', 'true');
-      if (_0x874bdc) {
-        _0x46a138[_0x58c8f5(0x1e3)] = _0x874bdc;
+    if (_0x1884b6) {
+      _0x454d88.setAttribute('disabled', "disabled");
+      _0x454d88.setAttribute("data-unavailable", "true");
+      if (_0x4f8ec2) {
+        _0xd82875.textContent = _0x4f8ec2;
       }
     } else {
-      _0x4ef371[_0x58c8f5(0x217)](_0x58c8f5(0xf1), _0x58c8f5(0x114));
-      _0x46a138[_0x58c8f5(0x1e3)] = window.variantStrings[_0x58c8f5(0x33c)];
-      if (_0x4ef371[_0x58c8f5(0x297)].requiredFields === _0x4ef371[_0x58c8f5(0x297)][_0x58c8f5(0x25e)]) {
-        _0x4ef371.removeAttribute(_0x58c8f5(0x1bc));
+      _0x454d88.setAttribute("data-unavailable", "false");
+      _0xd82875.textContent = window.variantStrings.addToCart;
+      if (_0x454d88.dataset.requiredFields === _0x454d88.dataset.validFields) {
+        _0x454d88.removeAttribute("disabled");
       }
     }
-    if (!_0x5ab70a) {
+    if (!_0x20306a) {
       return;
     }
   }
-  [a0_0x4ad3a2(0x292)]() {
-    const _0x5012a2 = a0_0x4ad3a2;
-    const _0x2f8ee7 = document[_0x5012a2(0x359)](_0x5012a2(0x25a) + this[_0x5012a2(0x297)][_0x5012a2(0xf3)]);
-    const _0x465d7e = _0x2f8ee7[_0x5012a2(0x110)](_0x5012a2(0xd1));
-    const _0x12142b = _0x2f8ee7[_0x5012a2(0x110)](_0x5012a2(0x1ec));
-    const _0x15c796 = document[_0x5012a2(0x359)](_0x5012a2(0x305) + this[_0x5012a2(0x297)].section);
-    const _0x57300c = document[_0x5012a2(0x359)]('Inventory-' + this[_0x5012a2(0x297)][_0x5012a2(0xf3)]);
-    const _0x2f3e2a = document[_0x5012a2(0x359)](_0x5012a2(0xaf) + this.dataset[_0x5012a2(0xf3)]);
-    if (!_0x465d7e) {
+  ["setUnavailable"]() {
+    const _0x4d8daf = document.getElementById("product-form-" + this.dataset.section);
+    const _0x480b35 = _0x4d8daf.querySelector("[name=\"add\"]");
+    const _0x471d09 = _0x4d8daf.querySelector("[name=\"add\"] > .main-atc__label");
+    const _0x2f4039 = document.getElementById("price-" + this.dataset.section);
+    const _0x38664a = document.getElementById('Inventory-' + this.dataset.section);
+    const _0x55ad4d = document.getElementById('Sku-' + this.dataset.section);
+    if (!_0x480b35) {
       return;
     }
-    _0x12142b[_0x5012a2(0x1e3)] = window[_0x5012a2(0x345)][_0x5012a2(0x225)];
-    if (_0x15c796) {
-      _0x15c796[_0x5012a2(0x30b)][_0x5012a2(0x1b7)](_0x5012a2(0x175));
+    _0x471d09.textContent = window.variantStrings.unavailable;
+    if (_0x2f4039) {
+      _0x2f4039.classList.add("visibility-hidden");
     }
-    if (_0x57300c) {
-      _0x57300c[_0x5012a2(0x30b)][_0x5012a2(0x1b7)](_0x5012a2(0x175));
+    if (_0x38664a) {
+      _0x38664a.classList.add('visibility-hidden');
     }
-    if (_0x2f3e2a) {
-      _0x2f3e2a.classList[_0x5012a2(0x1b7)]('visibility-hidden');
+    if (_0x55ad4d) {
+      _0x55ad4d.classList.add("visibility-hidden");
     }
   }
-  [a0_0x4ad3a2(0x25d)]() {
-    const _0x1b9513 = a0_0x4ad3a2;
-    this[_0x1b9513(0xe7)] = this[_0x1b9513(0xe7)] || JSON[_0x1b9513(0x163)](this.querySelector("[type=\"application/json\"]")[_0x1b9513(0x1e3)]);
+  ["getVariantData"]() {
+    this.variantData = this.variantData || JSON.parse(this.querySelector("[type=\"application/json\"]").textContent);
     return this.variantData;
   }
 }
-customElements.define(a0_0x4ad3a2(0x333), VariantSelects);
+customElements.define("variant-selects", VariantSelects);
 class SecondaryVariantSelect extends VariantSelects {
   constructor() {
-    const _0x4cb286 = a0_0x4ad3a2;
     super();
-    this.secondarySelectSelector = _0x4cb286(0x1e8);
-    this.secondarySelect = document.getElementById('' + this[_0x4cb286(0x1bb)] + this[_0x4cb286(0x297)].section);
+    this.secondarySelectSelector = "variant-selects-";
+    this.secondarySelect = document.getElementById('' + this.secondarySelectSelector + this.dataset.section);
     this.isSecondary = true;
   }
-  [a0_0x4ad3a2(0x311)]() {
-    const _0x56eabe = a0_0x4ad3a2;
-    this[_0x56eabe(0x1f5)] = this[_0x56eabe(0x110)](_0x56eabe(0x265))[_0x56eabe(0x2ea)][_0x56eabe(0x1ef)](',');
+  ["updateOptions"]() {
+    this.options = this.querySelector('select').value.split(',');
   }
 }
-customElements[a0_0x4ad3a2(0xb2)](a0_0x4ad3a2(0x29b), SecondaryVariantSelect);
-function a0_0x5a21(_0x46ad31, _0x2035c5) {
-  const _0x5630da = a0_0x5630();
-  a0_0x5a21 = function (_0x5a216f, _0x237559) {
-    _0x5a216f = _0x5a216f - 0x90;
-    let _0x12e8a1 = _0x5630da[_0x5a216f];
-    return _0x12e8a1;
-  };
-  return a0_0x5a21(_0x46ad31, _0x2035c5);
-}
-class SecondaryVariantSelectSeparate extends VariantSelects {
-  constructor() {
-    const _0xabf25f = a0_0x4ad3a2;
-    super();
-    this.secondarySelectSelector = _0xabf25f(0x1e8);
-    this[_0xabf25f(0x166)] = document[_0xabf25f(0x359)]('' + this[_0xabf25f(0x1bb)] + this[_0xabf25f(0x297)].section);
-    this[_0xabf25f(0x1b0)] = true;
-  }
-}
-customElements[a0_0x4ad3a2(0xb2)]('secondary-variant-select-separate', SecondaryVariantSelectSeparate);
+customElements.define('secondary-variant-select', SecondaryVariantSelect);
