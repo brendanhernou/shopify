@@ -782,6 +782,15 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
   }
   
   function initCartOverride() {
+    function shouldInterceptForm(form) {
+      if (!form || form.tagName !== 'FORM') return false;
+      if (form.getAttribute('data-type') === 'add-to-cart-form') return true;
+      const action = (form.getAttribute('action') || '').trim();
+      if (action.includes('/cart/add')) return true;
+      if (form.querySelector('input[name="id"]')) return true;
+      return false;
+    }
+    
     function processCartForm(form) {
       const formData = new FormData(form);
       let variantId = formData.get('id');
@@ -885,7 +894,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     // Override HTMLFormElement.prototype.submit to catch ALL form submissions
     const originalSubmit = HTMLFormElement.prototype.submit;
     HTMLFormElement.prototype.submit = function() {
-      if (this.getAttribute('data-type') === 'add-to-cart-form') {
+      if (shouldInterceptForm(this)) {
         processCartForm(this);
         return;
       }
@@ -895,6 +904,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     // Also override individual form submit methods
     function overrideFormSubmit(form) {
       if (form.dataset.cartOverrideAdded) return;
+      if (!shouldInterceptForm(form)) return;
       form.dataset.cartOverrideAdded = 'true';
       
       const originalSubmit = form.submit;
@@ -908,7 +918,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       
       // Also intercept submit events
       form.addEventListener('submit', function(e) {
-        if (this.getAttribute('data-type') === 'add-to-cart-form') {
+        if (shouldInterceptForm(this)) {
           e.preventDefault();
           e.stopImmediatePropagation();
           processCartForm(this);
@@ -919,7 +929,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     
     // Override all existing forms immediately
     function overrideAllForms() {
-      document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(overrideFormSubmit);
+      document.querySelectorAll('form').forEach(overrideFormSubmit);
     }
     
     // Run immediately if DOM is ready
@@ -934,10 +944,10 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       mutations.forEach(function(mutation) {
         mutation.addedNodes.forEach(function(node) {
           if (node.nodeType === 1) {
-            if (node.tagName === 'FORM' && node.getAttribute('data-type') === 'add-to-cart-form') {
+          if (node.tagName === 'FORM' && shouldInterceptForm(node)) {
               overrideFormSubmit(node);
             }
-            const forms = node.querySelectorAll ? node.querySelectorAll('form[data-type="add-to-cart-form"]') : [];
+            const forms = node.querySelectorAll ? node.querySelectorAll('form') : [];
             forms.forEach(overrideFormSubmit);
           }
         });
@@ -961,7 +971,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     // Also intercept at document level as backup
     document.addEventListener('submit', function(e) {
       const form = e.target;
-      if (form && form.getAttribute('data-type') === 'add-to-cart-form') {
+      if (form && shouldInterceptForm(form)) {
         if (!form.dataset.cartOverrideAdded) {
           overrideFormSubmit(form);
         }
