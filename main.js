@@ -815,6 +815,23 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       return endpoint;
     }
     
+    function hasRequiredSections(data) {
+      if (!data || !data.sections) {
+        return false;
+      }
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (!cartDrawer || typeof cartDrawer.getSectionsToRender !== 'function') {
+        return false;
+      }
+      try {
+        return cartDrawer.getSectionsToRender().every(section => {
+          return !!data.sections[section.id];
+        });
+      } catch (_0x4e2f8a) {
+        return false;
+      }
+    }
+    
     function fetchCartSections() {
       const sections = getSectionsParam();
       if (!sections) {
@@ -826,7 +843,8 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
       });
       return fetch('/cart?' + params.toString(), {
         'headers': {
-          'X-Requested-With': 'XMLHttpRequest'
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
         }
       }).then(response => {
         if (!response.ok) {
@@ -908,7 +926,7 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
         return response.json();
       })
       .then(async data => {
-        if (!data.sections) {
+        if (!hasRequiredSections(data)) {
           const sections = await fetchCartSections();
           if (sections) {
             data.sections = sections;
