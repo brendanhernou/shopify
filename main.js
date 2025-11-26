@@ -762,151 +762,199 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     }
   });
 }
-// Global form submission interceptor - ensures ALL add-to-cart forms use JSON with items parameter
-// This works regardless of whether external main.js defines product-form or not
+// ULTRA-AGGRESSIVE form submission override - override HTMLFormElement.submit() at prototype level
+// This ensures ALL add-to-cart forms use JSON with items parameter
+// Works even if external main.js calls form.submit() programmatically
 (function() {
-  function handleCartSubmit(event) {
-    const form = event.target;
-    if (!form || form.getAttribute('data-type') !== 'add-to-cart-form') {
-      return; // Not an add-to-cart form, let it proceed normally
-    }
-    
-    // Prevent default form submission
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    
-    const formData = new FormData(form);
-    const variantId = formData.get('id');
-    
-    if (!variantId) {
-      console.error('Cart: Missing variant ID');
-      const errorWrapper = form.closest('product-form')?.querySelector('.product-form__error-message-wrapper');
-      const errorMessage = form.closest('product-form')?.querySelector('.product-form__error-message');
-      if (errorWrapper && errorMessage) {
-        errorMessage.textContent = 'Please select a variant';
-        errorWrapper.hidden = false;
+  'use strict';
+  
+  if (!window.routes || !window.routes.cart_add_url) {
+    // Wait for routes to be defined
+    const checkRoutes = setInterval(function() {
+      if (window.routes && window.routes.cart_add_url) {
+        clearInterval(checkRoutes);
+        initCartOverride();
       }
+    }, 50);
+    setTimeout(function() { clearInterval(checkRoutes); }, 5000);
+  } else {
+    initCartOverride();
+  }
+  
+  function initCartOverride() {
+    function processCartForm(form) {
+      const formData = new FormData(form);
+      const variantId = formData.get('id');
+      
+      if (!variantId) {
+        console.error('Cart: Missing variant ID');
+        const errorWrapper = form.closest('product-form')?.querySelector('.product-form__error-message-wrapper');
+        const errorMessage = form.closest('product-form')?.querySelector('.product-form__error-message');
+        if (errorWrapper && errorMessage) {
+          errorMessage.textContent = 'Please select a variant';
+          errorWrapper.hidden = false;
+        }
+        return false;
+      }
+      
+      // Build items array with proper structure - this fixes "Parameter Missing" error
+      const items = [{
+        id: variantId,
+        quantity: parseInt(formData.get('quantity') || 1)
+      }];
+      
+      // Get properties if any
+      const properties = {};
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('properties[') && key.endsWith(']')) {
+          const propName = key.slice(11, -1);
+          properties[propName] = value;
+        }
+      }
+      if (Object.keys(properties).length > 0) {
+        items[0].properties = properties;
+      }
+      
+      // Use Shopify cart API with proper items parameter (JSON format)
+      fetch(window.routes.cart_add_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items: items })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            try {
+              const err = JSON.parse(text);
+              return Promise.reject(err);
+            } catch {
+              return Promise.reject(new Error(text || 'Cart add failed'));
+            }
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Open cart drawer if available, otherwise notification, otherwise redirect
+        const cartDrawer = document.querySelector('cart-drawer');
+        const cartNotification = document.querySelector('cart-notification');
+        
+        if (cartDrawer && cartDrawer.renderContents) {
+          cartDrawer.renderContents(data);
+        } else if (cartDrawer && cartDrawer.open) {
+          cartDrawer.open();
+        } else if (cartNotification && cartNotification.renderContents) {
+          cartNotification.renderContents(data);
+        } else {
+          // Only redirect if no drawer/notification available
+          window.location.href = window.routes.cart_url;
+        }
+      })
+      .catch(error => {
+        console.error('Cart add error:', error);
+        const productForm = form.closest('product-form');
+        const errorWrapper = productForm?.querySelector('.product-form__error-message-wrapper');
+        const errorMessage = productForm?.querySelector('.product-form__error-message');
+        if (errorWrapper && errorMessage) {
+          errorMessage.textContent = error.message || error.description || 'Failed to add item to cart';
+          errorWrapper.hidden = false;
+        }
+      });
+      
       return false;
     }
     
-    // Build items array with proper structure - this fixes "Parameter Missing" error
-    const items = [{
-      id: variantId,
-      quantity: parseInt(formData.get('quantity') || 1)
-    }];
-    
-    // Get properties if any
-    const properties = {};
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('properties[') && key.endsWith(']')) {
-        const propName = key.slice(11, -1);
-        properties[propName] = value;
+    // Override HTMLFormElement.prototype.submit to catch ALL form submissions
+    const originalSubmit = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function() {
+      if (this.getAttribute('data-type') === 'add-to-cart-form') {
+        processCartForm(this);
+        return;
       }
-    }
-    if (Object.keys(properties).length > 0) {
-      items[0].properties = properties;
+      return originalSubmit.call(this);
+    };
+    
+    // Also override individual form submit methods
+    function overrideFormSubmit(form) {
+      if (form.dataset.cartOverrideAdded) return;
+      form.dataset.cartOverrideAdded = 'true';
+      
+      const originalSubmit = form.submit;
+      form.submit = function() {
+        if (this.getAttribute('data-type') === 'add-to-cart-form') {
+          processCartForm(this);
+          return;
+        }
+        return originalSubmit.call(this);
+      };
+      
+      // Also intercept submit events
+      form.addEventListener('submit', function(e) {
+        if (this.getAttribute('data-type') === 'add-to-cart-form') {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          processCartForm(this);
+          return false;
+        }
+      }, true);
     }
     
-    // Use Shopify cart API with proper items parameter (JSON format)
-    fetch(window.routes.cart_add_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ items: items })
-    })
-    .then(response => {
-      if (!response.ok) {
-        return response.text().then(text => {
-          try {
-            const err = JSON.parse(text);
-            return Promise.reject(err);
-          } catch {
-            return Promise.reject(new Error(text || 'Cart add failed'));
+    // Override all existing forms immediately
+    function overrideAllForms() {
+      document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(overrideFormSubmit);
+    }
+    
+    // Run immediately if DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', overrideAllForms);
+    } else {
+      overrideAllForms();
+    }
+    
+    // Watch for dynamically added forms
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        mutation.addedNodes.forEach(function(node) {
+          if (node.nodeType === 1) {
+            if (node.tagName === 'FORM' && node.getAttribute('data-type') === 'add-to-cart-form') {
+              overrideFormSubmit(node);
+            }
+            const forms = node.querySelectorAll ? node.querySelectorAll('form[data-type="add-to-cart-form"]') : [];
+            forms.forEach(overrideFormSubmit);
           }
         });
-      }
-      return response.json();
-    })
-    .then(data => {
-      // Open cart drawer if available, otherwise notification, otherwise redirect
-      const cartDrawer = document.querySelector('cart-drawer');
-      const cartNotification = document.querySelector('cart-notification');
-      
-      if (cartDrawer && cartDrawer.renderContents) {
-        cartDrawer.renderContents(data);
-      } else if (cartDrawer && cartDrawer.open) {
-        cartDrawer.open();
-      } else if (cartNotification && cartNotification.renderContents) {
-        cartNotification.renderContents(data);
-      } else {
-        // Only redirect if no drawer/notification available
-        window.location.href = window.routes.cart_url;
-      }
-    })
-    .catch(error => {
-      console.error('Cart add error:', error);
-      const productForm = form.closest('product-form');
-      const errorWrapper = productForm?.querySelector('.product-form__error-message-wrapper');
-      const errorMessage = productForm?.querySelector('.product-form__error-message');
-      if (errorWrapper && errorMessage) {
-        errorMessage.textContent = error.message || error.description || 'Failed to add item to cart';
-        errorWrapper.hidden = false;
-      }
+      });
     });
     
-    return false;
-  }
-  
-  // Intercept ALL form submissions with capture phase to run first
-  document.addEventListener('submit', handleCartSubmit, true);
-  
-  // Also handle dynamically added forms
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      mutation.addedNodes.forEach(function(node) {
-        if (node.nodeType === 1) { // Element node
-          const forms = node.querySelectorAll ? node.querySelectorAll('form[data-type="add-to-cart-form"]') : [];
-          forms.forEach(function(form) {
-            if (!form.dataset.cartHandlerAdded) {
-              form.dataset.cartHandlerAdded = 'true';
-              form.addEventListener('submit', handleCartSubmit, true);
-            }
-          });
-          // Also check if the node itself is a form
-          if (node.tagName === 'FORM' && node.getAttribute('data-type') === 'add-to-cart-form' && !node.dataset.cartHandlerAdded) {
-            node.dataset.cartHandlerAdded = 'true';
-            node.addEventListener('submit', handleCartSubmit, true);
-          }
-        }
+    if (document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
       });
-    });
-  });
-  
-  // Start observing
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  // Also attach to existing forms on DOMContentLoaded
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(function(form) {
-        if (!form.dataset.cartHandlerAdded) {
-          form.dataset.cartHandlerAdded = 'true';
-          form.addEventListener('submit', handleCartSubmit, true);
-        }
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
       });
-    });
-  } else {
-    // DOM already loaded
-    document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(function(form) {
-      if (!form.dataset.cartHandlerAdded) {
-        form.dataset.cartHandlerAdded = 'true';
-        form.addEventListener('submit', handleCartSubmit, true);
+    }
+    
+    // Also intercept at document level as backup
+    document.addEventListener('submit', function(e) {
+      const form = e.target;
+      if (form && form.getAttribute('data-type') === 'add-to-cart-form') {
+        if (!form.dataset.cartOverrideAdded) {
+          overrideFormSubmit(form);
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        processCartForm(form);
+        return false;
       }
-    });
+    }, true);
   }
 })();
 
