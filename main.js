@@ -652,10 +652,18 @@ class CartDrawer extends HTMLElement {
       this.querySelector(".drawer__inner").classList.remove('is-empty');
     }
     this.productId = _0x7ece4f.id;
-    this.getSectionsToRender().forEach(_0x58e0ac => {
-      const _0x5cc7d9 = _0x58e0ac.selector ? document.querySelector(_0x58e0ac.selector) : document.getElementById(_0x58e0ac.id);
-      _0x5cc7d9.innerHTML = this.getSectionInnerHTML(_0x7ece4f.sections[_0x58e0ac.id], _0x58e0ac.selector);
-    });
+    if (_0x7ece4f.sections) {
+      this.getSectionsToRender().forEach(_0x58e0ac => {
+        const sectionHtml = _0x7ece4f.sections[_0x58e0ac.id];
+        if (!sectionHtml) {
+          return;
+        }
+        const _0x5cc7d9 = _0x58e0ac.selector ? document.querySelector(_0x58e0ac.selector) : document.getElementById(_0x58e0ac.id);
+        if (_0x5cc7d9) {
+          _0x5cc7d9.innerHTML = this.getSectionInnerHTML(sectionHtml, _0x58e0ac.selector);
+        }
+      });
+    }
     this.checkForClear();
     const _0x478fc8 = this.querySelector("countdown-timer");
     if (_0x478fc8) {
@@ -1284,7 +1292,8 @@ Shopify.CountryProvinceSelector.prototype = {
 // The country check is needed for theme functionality but must not interfere with cart/license
 // Error message injection is disabled to prevent license error interference
 try {
-  if (document.currentScript && document.currentScript.dataset.countryList) {
+  const countryScript = document.currentScript;
+  if (countryScript && countryScript.dataset && countryScript.dataset.countryList) {
     // Run country check asynchronously and non-blocking
     // Delay to ensure it doesn't interfere with cart operations
     setTimeout(() => {
@@ -1293,10 +1302,10 @@ try {
           'content-type': "application/json"
         },
         'body': JSON.stringify({
-          'list_function': document.currentScript.dataset.countryListFunction,
-          'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
+          'list_function': countryScript.dataset.countryListFunction,
+          'country_list': countryScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
           'access_accept': Shopify.internationalAccessAccept(),
-          'error_message': document.currentScript.dataset.countryListError
+          'error_message': countryScript.dataset.countryListError
         }),
         'method': "POST"
       }).then(_0x2c0fe6 => {
@@ -2108,9 +2117,26 @@ class CartDrawerUpsell extends ProductInfoUpsell {
   constructor() {
     super();
     this.cartDrawer = document.querySelector("cart-drawer");
-    this.cartItems = this.cartDrawer.querySelector("cart-drawer-items");
-    this.productForm = this.querySelector('product-form');
-    this.idInput = this.productForm.querySelector("[name=\"id\"]");
+    this.cartItems = this.cartDrawer ? this.cartDrawer.querySelector("cart-drawer-items") : null;
+    this.productForm = this.querySelector('product-form') || this.querySelector('form');
+    this.idInput = this.productForm ? this.productForm.querySelector("[name=\"id\"]") : null;
+  }
+  handleFormSubmission() {
+    if (!this.productForm) {
+      return;
+    }
+    if (typeof this.productForm.handleSubmit === "function") {
+      this.productForm.handleSubmit();
+      return;
+    }
+    const innerForm = this.productForm.tagName === 'FORM' ? this.productForm : this.productForm.querySelector('form');
+    if (innerForm) {
+      if (typeof innerForm.requestSubmit === 'function') {
+        innerForm.requestSubmit();
+      } else {
+        innerForm.dispatchEvent(new Event('submit', { 'bubbles': true, 'cancelable': true }));
+      }
+    }
   }
   ["handleToggle"](_0x738cea) {
     if (_0x738cea.target.nodeName.toLowerCase() === "select" || _0x738cea.target.nodeName.toLowerCase() === 'option') {
@@ -2132,6 +2158,10 @@ class CartDrawerUpsell extends ProductInfoUpsell {
     }
   }
   ["addToCart"]() {
+    if (!this.cartDrawer) {
+      this.handleFormSubmission();
+      return;
+    }
     const _0x884201 = this.cartDrawer.querySelector(".cart-item--product-" + this.dataset.handle);
     if (_0x884201) {
       return;
@@ -2142,9 +2172,12 @@ class CartDrawerUpsell extends ProductInfoUpsell {
     this.variantSelectElements.forEach(_0x1344c4 => {
       _0x1344c4.setAttribute("disabled", '');
     });
-    this.productForm.handleSubmit();
+    this.handleFormSubmission();
   }
   ["removeFromCart"]() {
+    if (!this.cartDrawer) {
+      return;
+    }
     const _0x2af4ce = this.cartDrawer.querySelector(".cart-item--product-" + this.dataset.handle);
     if (!_0x2af4ce || !this.cartItems) {
       return;
@@ -2159,7 +2192,9 @@ class CartDrawerUpsell extends ProductInfoUpsell {
   }
   ["updateId"](_0x198fba) {
     this.dataset.id = _0x198fba;
-    this.idInput.value = _0x198fba;
+    if (this.idInput) {
+      this.idInput.value = _0x198fba;
+    }
     if (this.dataset.selected === "true") {
       if (this.selectTimeout) {
         clearTimeout(this.selectTimeout);
