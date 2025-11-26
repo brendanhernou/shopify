@@ -784,15 +784,26 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
   function initCartOverride() {
     function processCartForm(form) {
       const formData = new FormData(form);
-      const variantId = formData.get('id');
+      let variantId = formData.get('id');
+      if (!variantId) {
+        const variantInput = form.querySelector('input[name="id"], input.product-variant-id');
+        if (variantInput && variantInput.value) {
+          variantId = variantInput.value;
+        } else if (form.dataset.productId) {
+          variantId = form.dataset.productId;
+        }
+      }
       
       if (!variantId) {
         console.error('Cart: Missing variant ID');
-        const errorWrapper = form.closest('product-form')?.querySelector('.product-form__error-message-wrapper');
-        const errorMessage = form.closest('product-form')?.querySelector('.product-form__error-message');
-        if (errorWrapper && errorMessage) {
-          errorMessage.textContent = 'Please select a variant';
-          errorWrapper.hidden = false;
+        const productForm = form.closest('product-form');
+        if (productForm) {
+          const errorWrapper = productForm.querySelector('.product-form__error-message-wrapper');
+          const errorMessage = productForm.querySelector('.product-form__error-message');
+          if (errorWrapper && errorMessage) {
+            errorMessage.textContent = 'Please select a variant';
+            errorWrapper.hidden = false;
+          }
         }
         return false;
       }
