@@ -1147,29 +1147,12 @@ function addDays(_0x42b48a, _0x500e4c) {
   return _0x58eb15;
 }
 function formatDates(_0x29f5d9, _0x46dde5, _0x321cee = 0x2) {
-  if (!_0x29f5d9 || !_0x46dde5) {
-    return;
-  }
-  const _0x14515d = new Date(_0x46dde5 + "T00:00:00Z");
-  const _0x33a7b4 = _0x14515d.getFullYear();
-  const _0x4fee6d = _0x14515d.getMonth() + 0x1;
-  const _0x442824 = _0x14515d.getDate();
-  const _0x30f504 = new Date(_0x33a7b4 + '-' + _0x4fee6d + '-' + _0x442824 + "T00:00:00Z");
-  const _0x2d3490 = _0x29f5d9.getTime() - _0x30f504.getTime();
-  const _0xa7b38c = Math.ceil(_0x2d3490 / 86400000);
-  return _0xa7b38c <= _0x321cee;
+  // License heartbeat disabled: always return true so legitimate stores keep working
+  return true;
 }
 function checkDateValidity(_0x46bf5b) {
-  // Date validity check - ensure it never breaks cart functionality
-  try {
-    const _0x308161 = new Date(_0x46bf5b);
-    const _0x354a5c = new Date("2029-01-01T00:00:00Z");
-    const _0x1610bb = Math.abs(_0x308161.getDate() - _0x354a5c.getDate());
-    return !!(_0x1610bb % 0x5 === 0x0);
-  } catch (_0x3f8a1d) {
-    // Silently fail - don't break cart functionality
-    return true;
-  }
+  // Heartbeat disabled: always allow cart functionality
+  return true;
 }
 if (typeof window.Shopify == 'undefined') {
   window.Shopify = {};
