@@ -418,10 +418,10 @@ class CartItems extends HTMLElement {
 }
 customElements.define("cart-items", CartItems);
 var search = "search";
-if (!customElements.get("cart-note")) {
-  customElements.define("cart-note");
-}
-;
+// FIXED: Removed invalid customElements.define call - cart-note element should be defined elsewhere or removed
+// if (!customElements.get("cart-note")) {
+//   customElements.define("cart-note", class extends HTMLElement {});
+// }
 function handleDiscountForm(_0x2c23bc) {
   _0x2c23bc.preventDefault();
   const _0xb8ca30 = _0x2c23bc.target.querySelector("[name=cart-discount-field]");
@@ -923,13 +923,94 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     }
   });
 }
+// FIXED: Added ProductForm class to handle AJAX cart submission and open cart drawer
 if (!customElements.get("product-form")) {
-  customElements.define('product-form');
+  class ProductForm extends HTMLElement {
+    constructor() {
+      super();
+      this.form = this.querySelector('form');
+      if (this.form) {
+        this.form.addEventListener('submit', this.handleSubmit.bind(this));
+      }
+    }
+    
+    handleSubmit(event) {
+      if (event) {
+        event.preventDefault();
+      }
+      
+      const formData = new FormData(this.form);
+      const submitButton = this.form.querySelector('[type="submit"]');
+      
+      if (submitButton) {
+        submitButton.setAttribute('disabled', 'disabled');
+        submitButton.classList.add('loading');
+      }
+      
+      const cartDrawer = document.querySelector('cart-drawer');
+      const sectionsToRender = cartDrawer ? cartDrawer.getSectionsToRender().map(s => s.id) : ['cart-drawer', 'cart-icon-bubble'];
+      
+      // Add sections parameter for Shopify cart API
+      formData.append('sections', sectionsToRender.join(','));
+      formData.append('sections_url', window.location.pathname);
+      
+      const cartAddUrl = routes.cart_add_url || '/cart/add.js';
+      
+      fetch(cartAddUrl, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Cart add failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.errors) {
+          if (submitButton) {
+            submitButton.removeAttribute('disabled');
+            submitButton.classList.remove('loading');
+          }
+          // Handle errors - could show error message
+          console.error('Cart add errors:', data.errors);
+          return;
+        }
+        
+        // Update cart drawer with response
+        if (cartDrawer && data.sections) {
+          cartDrawer.renderContents(data, false);
+        } else if (cartDrawer) {
+          // Fallback: just open the drawer if no sections returned
+          cartDrawer.open();
+        }
+        
+        // Publish cart update event
+        publish('cart-update', { source: 'product-form' });
+        
+        if (submitButton) {
+          submitButton.removeAttribute('disabled');
+          submitButton.classList.remove('loading');
+        }
+      })
+      .catch(error => {
+        console.error('Cart add error:', error);
+        if (submitButton) {
+          submitButton.removeAttribute('disabled');
+          submitButton.classList.remove('loading');
+        }
+      });
+    }
+  }
+  customElements.define('product-form', ProductForm);
 }
+
 if (!customElements.get("product-info")) {
-  customElements.define("product-info");
+  customElements.define("product-info", class extends HTMLElement {});
 }
-;
 function getFocusableElements(_0x41fec0) {
   return Array.from(_0x41fec0.querySelectorAll("summary, a[href], button:enabled, [tabindex]:not([tabindex^='-']), [draggable], area, input:not([type=hidden]):enabled, select:enabled, textarea:enabled, object, iframe"));
 }
