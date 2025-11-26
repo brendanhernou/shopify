@@ -648,8 +648,12 @@ class CartDrawer extends HTMLElement {
     _0x3fa0de.parentElement.addEventListener("keyup", onKeyUpEscape);
   }
   ["renderContents"](_0x7ece4f, _0x1b50d7 = false) {
-    if (this.querySelector(".drawer__inner").classList.contains("is-empty")) {
-      this.querySelector(".drawer__inner").classList.remove('is-empty');
+    const _0x3abcef = this.querySelector(".drawer__inner");
+    if (_0x3abcef && _0x3abcef.classList.contains("is-empty")) {
+      _0x3abcef.classList.remove('is-empty');
+    }
+    if (this.classList.contains("is-empty") && _0x7ece4f && ((_0x7ece4f.item_count ?? 1) > 0 || (_0x7ece4f.sections && Object.keys(_0x7ece4f.sections).length))) {
+      this.classList.remove("is-empty");
     }
     this.productId = _0x7ece4f.id;
     if (_0x7ece4f.sections) {
