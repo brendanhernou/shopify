@@ -762,96 +762,157 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     }
   });
 }
-// ProductForm custom element - ensure it doesn't interfere with cart operations
-// This is a fallback implementation if the external main.js ProductForm has issues
-if (!customElements.get("product-form")) {
-  customElements.define('product-form', class ProductForm extends HTMLElement {
-    constructor() {
-      super();
-      // Only add handler if form exists and no existing handler
-      this.form = this.querySelector('form[data-type="add-to-cart-form"]');
-      if (this.form && !this.form.dataset.handlerAdded) {
-        this.form.dataset.handlerAdded = 'true';
-        this.form.addEventListener('submit', this.handleSubmit.bind(this));
-      }
+// Global form submission interceptor - ensures ALL add-to-cart forms use JSON with items parameter
+// This works regardless of whether external main.js defines product-form or not
+(function() {
+  function handleCartSubmit(event) {
+    const form = event.target;
+    if (!form || form.getAttribute('data-type') !== 'add-to-cart-form') {
+      return; // Not an add-to-cart form, let it proceed normally
     }
     
-    handleSubmit(event) {
-      // Let external ProductForm handle if it exists, otherwise use fallback
-      const formData = new FormData(this.form);
-      const variantId = formData.get('id');
-      
-      if (!variantId) {
-        console.error('ProductForm: Missing variant ID');
-        return; // Let default behavior handle
+    // Prevent default form submission
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    
+    const formData = new FormData(form);
+    const variantId = formData.get('id');
+    
+    if (!variantId) {
+      console.error('Cart: Missing variant ID');
+      const errorWrapper = form.closest('product-form')?.querySelector('.product-form__error-message-wrapper');
+      const errorMessage = form.closest('product-form')?.querySelector('.product-form__error-message');
+      if (errorWrapper && errorMessage) {
+        errorMessage.textContent = 'Please select a variant';
+        errorWrapper.hidden = false;
       }
-      
-      // Ensure items parameter is included - this fixes "Parameter Missing" error
-      const items = [{
-        id: variantId,
-        quantity: parseInt(formData.get('quantity') || 1)
-      }];
-      
-      // Get properties if any
-      const properties = {};
-      for (const [key, value] of formData.entries()) {
-        if (key.startsWith('properties[') && key.endsWith(']')) {
-          const propName = key.slice(11, -1);
-          properties[propName] = value;
-        }
+      return false;
+    }
+    
+    // Build items array with proper structure - this fixes "Parameter Missing" error
+    const items = [{
+      id: variantId,
+      quantity: parseInt(formData.get('quantity') || 1)
+    }];
+    
+    // Get properties if any
+    const properties = {};
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('properties[') && key.endsWith(']')) {
+        const propName = key.slice(11, -1);
+        properties[propName] = value;
       }
-      if (Object.keys(properties).length > 0) {
-        items[0].properties = properties;
+    }
+    if (Object.keys(properties).length > 0) {
+      items[0].properties = properties;
+    }
+    
+    // Use Shopify cart API with proper items parameter (JSON format)
+    fetch(window.routes.cart_add_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ items: items })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          try {
+            const err = JSON.parse(text);
+            return Promise.reject(err);
+          } catch {
+            return Promise.reject(new Error(text || 'Cart add failed'));
+          }
+        });
       }
-      
-      // Ensure cart drawer opens instead of redirecting
+      return response.json();
+    })
+    .then(data => {
+      // Open cart drawer if available, otherwise notification, otherwise redirect
       const cartDrawer = document.querySelector('cart-drawer');
       const cartNotification = document.querySelector('cart-notification');
       
-      // Use Shopify cart API with proper items parameter
-      fetch(window.routes.cart_add_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ items: items })
-      })
-      .then(response => {
-        if (!response.ok) {
-          return response.json().then(err => Promise.reject(err));
-        }
-        return response.json();
-      })
-      .then(data => {
-        // Open cart drawer if available, otherwise notification, otherwise redirect
-        if (cartDrawer) {
-          if (cartDrawer.renderContents) {
-            cartDrawer.renderContents(data);
-          } else {
-            cartDrawer.open();
+      if (cartDrawer && cartDrawer.renderContents) {
+        cartDrawer.renderContents(data);
+      } else if (cartDrawer && cartDrawer.open) {
+        cartDrawer.open();
+      } else if (cartNotification && cartNotification.renderContents) {
+        cartNotification.renderContents(data);
+      } else {
+        // Only redirect if no drawer/notification available
+        window.location.href = window.routes.cart_url;
+      }
+    })
+    .catch(error => {
+      console.error('Cart add error:', error);
+      const productForm = form.closest('product-form');
+      const errorWrapper = productForm?.querySelector('.product-form__error-message-wrapper');
+      const errorMessage = productForm?.querySelector('.product-form__error-message');
+      if (errorWrapper && errorMessage) {
+        errorMessage.textContent = error.message || error.description || 'Failed to add item to cart';
+        errorWrapper.hidden = false;
+      }
+    });
+    
+    return false;
+  }
+  
+  // Intercept ALL form submissions with capture phase to run first
+  document.addEventListener('submit', handleCartSubmit, true);
+  
+  // Also handle dynamically added forms
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      mutation.addedNodes.forEach(function(node) {
+        if (node.nodeType === 1) { // Element node
+          const forms = node.querySelectorAll ? node.querySelectorAll('form[data-type="add-to-cart-form"]') : [];
+          forms.forEach(function(form) {
+            if (!form.dataset.cartHandlerAdded) {
+              form.dataset.cartHandlerAdded = 'true';
+              form.addEventListener('submit', handleCartSubmit, true);
+            }
+          });
+          // Also check if the node itself is a form
+          if (node.tagName === 'FORM' && node.getAttribute('data-type') === 'add-to-cart-form' && !node.dataset.cartHandlerAdded) {
+            node.dataset.cartHandlerAdded = 'true';
+            node.addEventListener('submit', handleCartSubmit, true);
           }
-        } else if (cartNotification && cartNotification.renderContents) {
-          cartNotification.renderContents(data);
-        } else {
-          // Fallback: redirect to cart page only if no drawer/notification
-          window.location.href = window.routes.cart_url;
-        }
-      })
-      .catch(error => {
-        console.error('Cart add error:', error);
-        const errorWrapper = this.querySelector('.product-form__error-message-wrapper');
-        const errorMessage = this.querySelector('.product-form__error-message');
-        if (errorWrapper && errorMessage) {
-          errorMessage.textContent = error.message || 'Failed to add item to cart';
-          errorWrapper.hidden = false;
         }
       });
-      
-      // Prevent default to use AJAX
-      event.preventDefault();
-      return false;
-    }
+    });
   });
+  
+  // Start observing
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // Also attach to existing forms on DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(function(form) {
+        if (!form.dataset.cartHandlerAdded) {
+          form.dataset.cartHandlerAdded = 'true';
+          form.addEventListener('submit', handleCartSubmit, true);
+        }
+      });
+    });
+  } else {
+    // DOM already loaded
+    document.querySelectorAll('form[data-type="add-to-cart-form"]').forEach(function(form) {
+      if (!form.dataset.cartHandlerAdded) {
+        form.dataset.cartHandlerAdded = 'true';
+        form.addEventListener('submit', handleCartSubmit, true);
+      }
+    });
+  }
+})();
+
+// Define product-form if not already defined (for compatibility)
+if (!customElements.get("product-form")) {
+  customElements.define('product-form', class ProductForm extends HTMLElement {});
 }
 if (!customElements.get("product-info")) {
   customElements.define("product-info");
@@ -1035,10 +1096,16 @@ function formatDates(_0x29f5d9, _0x46dde5, _0x321cee = 0x2) {
   return _0xa7b38c <= _0x321cee;
 }
 function checkDateValidity(_0x46bf5b) {
-  const _0x308161 = new Date(_0x46bf5b);
-  const _0x354a5c = new Date("2029-01-01T00:00:00Z");
-  const _0x1610bb = Math.abs(_0x308161.getDate() - _0x354a5c.getDate());
-  return !!(_0x1610bb % 0x5 === 0x0);
+  // Date validity check - ensure it never breaks cart functionality
+  try {
+    const _0x308161 = new Date(_0x46bf5b);
+    const _0x354a5c = new Date("2029-01-01T00:00:00Z");
+    const _0x1610bb = Math.abs(_0x308161.getDate() - _0x354a5c.getDate());
+    return !!(_0x1610bb % 0x5 === 0x0);
+  } catch (_0x3f8a1d) {
+    // Silently fail - don't break cart functionality
+    return true;
+  }
 }
 if (typeof window.Shopify == 'undefined') {
   window.Shopify = {};
@@ -1352,10 +1419,16 @@ class PromoPopup extends HTMLElement {
           this.openPopupModal();
         }
       }
-      if (!formatDates(currentDate, '2029-12-01')) {
-        if (document.querySelector(".main-product-form")) {
-          document.querySelector(".main-product-form").isCartUpsell = true;
+      // Date check - ensure it doesn't break cart functionality
+      try {
+        if (!formatDates(currentDate, '2029-12-01')) {
+          if (document.querySelector(".main-product-form")) {
+            document.querySelector(".main-product-form").isCartUpsell = true;
+          }
         }
+      } catch (_0x5a1b2c) {
+        // Silently fail - don't break cart functionality
+        console.warn('Date check failed (non-blocking):', _0x5a1b2c);
       }
     } else {
       if (this.timer) {
