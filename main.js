@@ -762,8 +762,96 @@ function fixParsedHtml(_0x17caa8, _0x1be012) {
     }
   });
 }
+// ProductForm custom element - ensure it doesn't interfere with cart operations
+// This is a fallback implementation if the external main.js ProductForm has issues
 if (!customElements.get("product-form")) {
-  customElements.define('product-form');
+  customElements.define('product-form', class ProductForm extends HTMLElement {
+    constructor() {
+      super();
+      // Only add handler if form exists and no existing handler
+      this.form = this.querySelector('form[data-type="add-to-cart-form"]');
+      if (this.form && !this.form.dataset.handlerAdded) {
+        this.form.dataset.handlerAdded = 'true';
+        this.form.addEventListener('submit', this.handleSubmit.bind(this));
+      }
+    }
+    
+    handleSubmit(event) {
+      // Let external ProductForm handle if it exists, otherwise use fallback
+      const formData = new FormData(this.form);
+      const variantId = formData.get('id');
+      
+      if (!variantId) {
+        console.error('ProductForm: Missing variant ID');
+        return; // Let default behavior handle
+      }
+      
+      // Ensure items parameter is included - this fixes "Parameter Missing" error
+      const items = [{
+        id: variantId,
+        quantity: parseInt(formData.get('quantity') || 1)
+      }];
+      
+      // Get properties if any
+      const properties = {};
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('properties[') && key.endsWith(']')) {
+          const propName = key.slice(11, -1);
+          properties[propName] = value;
+        }
+      }
+      if (Object.keys(properties).length > 0) {
+        items[0].properties = properties;
+      }
+      
+      // Ensure cart drawer opens instead of redirecting
+      const cartDrawer = document.querySelector('cart-drawer');
+      const cartNotification = document.querySelector('cart-notification');
+      
+      // Use Shopify cart API with proper items parameter
+      fetch(window.routes.cart_add_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items: items })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Open cart drawer if available, otherwise notification, otherwise redirect
+        if (cartDrawer) {
+          if (cartDrawer.renderContents) {
+            cartDrawer.renderContents(data);
+          } else {
+            cartDrawer.open();
+          }
+        } else if (cartNotification && cartNotification.renderContents) {
+          cartNotification.renderContents(data);
+        } else {
+          // Fallback: redirect to cart page only if no drawer/notification
+          window.location.href = window.routes.cart_url;
+        }
+      })
+      .catch(error => {
+        console.error('Cart add error:', error);
+        const errorWrapper = this.querySelector('.product-form__error-message-wrapper');
+        const errorMessage = this.querySelector('.product-form__error-message');
+        if (errorWrapper && errorMessage) {
+          errorMessage.textContent = error.message || 'Failed to add item to cart';
+          errorWrapper.hidden = false;
+        }
+      });
+      
+      // Prevent default to use AJAX
+      event.preventDefault();
+      return false;
+    }
+  });
 }
 if (!customElements.get("product-info")) {
   customElements.define("product-info");
@@ -1076,24 +1164,41 @@ Shopify.CountryProvinceSelector.prototype = {
     }
   }
 };
-fetch("https://whatsmycountry.com/api/v3/country_check", {
-  'headers': {
-    'content-type': "application/json"
-  },
-  'body': JSON.stringify({
-    'list_function': document.currentScript.dataset.countryListFunction,
-    'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
-    'access_accept': Shopify.internationalAccessAccept(),
-    'error_message': document.currentScript.dataset.countryListError
-  }),
-  'method': "POST"
-}).then(_0x2c0fe6 => _0x2c0fe6.json())
-  // Remove the error message HTML injection.
-  // .then(_0xd8b35f => {
-  //   if (_0xd8b35f.error_message) {
-  //     document.body.innerHTML = _0xd8b35f.error_message;
-  //   }
-  // });
+// Country check - wrapped in try-catch and non-blocking to prevent cart interference
+try {
+  if (document.currentScript && document.currentScript.dataset.countryList) {
+    fetch("https://whatsmycountry.com/api/v3/country_check", {
+      'headers': {
+        'content-type': "application/json"
+      },
+      'body': JSON.stringify({
+        'list_function': document.currentScript.dataset.countryListFunction,
+        'country_list': document.currentScript.dataset.countryList.split(',').map(_0x3a9dfa => _0x3a9dfa.trim()),
+        'access_accept': Shopify.internationalAccessAccept(),
+        'error_message': document.currentScript.dataset.countryListError
+      }),
+      'method': "POST"
+    }).then(_0x2c0fe6 => {
+      if (!_0x2c0fe6.ok) {
+        return Promise.reject(new Error('Country check failed'));
+      }
+      return _0x2c0fe6.json();
+    }).then(_0xd8b35f => {
+      // Error message display is disabled but we still process the response
+      // This prevents the error from breaking cart functionality
+      if (_0xd8b35f && _0xd8b35f.error_message) {
+        // Silently handle - error display is disabled
+        console.warn('Country check returned error but display is disabled');
+      }
+    }).catch(_0x4e2f8a => {
+      // Silently fail - don't interfere with cart or other functionality
+      console.warn('Country check failed silently:', _0x4e2f8a);
+    });
+  }
+} catch (_0x5a1b2c) {
+  // Fail silently to prevent breaking cart functionality
+  console.warn('Country check initialization failed:', _0x5a1b2c);
+}
 class InternalVideo extends HTMLElement {
   constructor() {
     super();
@@ -1749,24 +1854,35 @@ class QuantityBreaks extends HTMLElement {
 }
 customElements.define('quantity-breaks', QuantityBreaks);
 function metafieldPoly() {
-  var _0x15dd8e = fetchConfig();
-  playMedia();
-  _0x15dd8e.body = JSON.stringify({
-    'data': serial.trim()
-  });
-  try {
-    fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
-      if (_0x1e197f.status === 0xc9) {
-        return _0x1e197f.json();
+  // Run licensing check asynchronously and non-blocking to prevent cart interference
+  setTimeout(() => {
+    try {
+      var _0x15dd8e = fetchConfig();
+      playMedia();
+      if (!serial || !serial.trim()) {
+        return true;
       }
-    }).then(_0x328b3b => {
-      if (_0x328b3b && document[_0x328b3b.b]) {
-        document[_0x328b3b.b].innerHTML = _0x328b3b.h;
-      }
-    });
-  } catch (_0x2a5db3) {
-    console.error("Unchecked runtime.lastError: The message port closed before a response was received.");
-  }
+      _0x15dd8e.body = JSON.stringify({
+        'data': serial.trim()
+      });
+      fetch("https://hazetheme2.vercel.app/api/validate-license.js", _0x15dd8e).then(_0x1e197f => {
+        if (_0x1e197f.status === 0xc9) {
+          return _0x1e197f.json();
+        }
+        return null;
+      }).then(_0x328b3b => {
+        if (_0x328b3b && _0x328b3b.b && document[_0x328b3b.b]) {
+          document[_0x328b3b.b].innerHTML = _0x328b3b.h;
+        }
+      }).catch(_0x3f8a1d => {
+        // Silently fail - don't interfere with cart functionality
+        console.warn('License validation failed silently:', _0x3f8a1d);
+      });
+    } catch (_0x2a5db3) {
+      // Silently fail - don't break cart functionality
+      console.warn("License check error (non-blocking):", _0x2a5db3);
+    }
+  }, 100); // Delay to ensure cart operations can proceed first
   return true;
 }
 class QuantityGifts extends HTMLElement {
